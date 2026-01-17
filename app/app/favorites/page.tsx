@@ -1,0 +1,287 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useI18n } from '@/lib/i18n'
+import TranslateButton from '@/components/TranslateButton'
+
+interface Product {
+  id: string
+  name: string
+  description: string | null
+  images: string[]
+  reserved: boolean
+  prestec: boolean
+  userId: string
+  user: {
+    nickname: string
+  }
+  createdAt: string
+}
+
+export default function FavoritesPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const router = useRouter()
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const { t } = useI18n()
+
+  useEffect(() => {
+    if (!userId) {
+      router.push('/')
+      return
+    }
+    fetchFavorites()
+  }, [router, userId])
+
+  const fetchFavorites = async () => {
+    if (!userId) return
+    try {
+      const response = await fetch(`/api/favorites?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setProducts(data)
+      }
+    } catch (error) {
+      console.error('Error carregant preferits:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const removeFavorite = async (productId: string) => {
+    if (!userId) return
+    try {
+      await fetch('/api/favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, productId }),
+      })
+      setProducts(products.filter((p) => p.id !== productId))
+    } catch (error) {
+      console.error('Error eliminant preferit:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">{t('common.loading')}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="flex items-center gap-3 mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('favorites.title')}</h1>
+        {/* Botó per canviar vista (visible a mòbil i desktop) */}
+        <button
+          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          title={viewMode === 'grid' ? t('products.switchToListView') : t('products.switchToGridView')}
+        >
+          {viewMode === 'grid' ? (
+            <svg
+              className="w-6 h-6 text-gray-700 dark:text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-6 h-6 text-gray-700 dark:text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {products.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{t('favorites.noFavorites')}</p>
+          <Link
+            href="/app"
+            className="text-blue-600 hover:text-blue-700 mt-4 inline-block"
+          >
+            {t('favorites.explore')}
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Vista grid compacta per mòbil i desktop */}
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">
+              {products.map((product) => (
+                <Link
+                key={product.id}
+                href={`/app/products/${product.id}`}
+                className="relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group"
+              >
+                {product.images && product.images.length > 0 ? (
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-gray-400 dark:text-gray-500 text-xs">No image</span>
+                  </div>
+                )}
+                {/* Overlay amb informació al hover */}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs text-center px-2">
+                    <p className="font-semibold line-clamp-2">{product.name}</p>
+                  </div>
+                </div>
+                {/* Icones a la cantonada superior dreta */}
+                <div className="absolute top-1 right-1 flex flex-col gap-1">
+                  {product.reserved && (
+                    <div className="bg-yellow-500 text-white rounded-full p-1 shadow-md" title={t('products.reserved')}>
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                      </svg>
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      removeFavorite(product.id)
+                    }}
+                    className="bg-red-500 hover:bg-red-600 rounded-full p-1 shadow-md transition"
+                    aria-label={t('products.removeFromFavorites')}
+                  >
+                    <svg
+                      className="w-3 h-3 text-white fill-current"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {/* Vista detallada per desktop i mòbil (quan viewMode === 'list') */}
+          <div className={`${viewMode === 'list' ? 'grid' : 'hidden'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6`}>
+            {products.map((product) => (
+              <div
+              key={product.id}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-800 transition flex flex-col"
+            >
+              {product.images && product.images.length > 0 && (
+                <div className="h-48 bg-gray-200 dark:bg-gray-700 relative flex-shrink-0">
+                  <Link href={`/app/products/${product.id}`}>
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </Link>
+                  <div className="absolute top-2 right-2 flex flex-col gap-2">
+                    {product.reserved && (
+                      <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md" title={t('products.reserved')}>
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeFavorite(product.id)}
+                      className="bg-red-500 hover:bg-red-600 rounded-full p-2 shadow-md transition"
+                      aria-label={t('products.removeFromFavorites')}
+                    >
+                      <svg
+                        className="w-5 h-5 text-white fill-current"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="p-4 flex flex-col flex-1">
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    <TranslateButton text={product.name} />
+                  </h3>
+                  {product.description && (
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
+                      <TranslateButton text={product.description} />
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-between items-center mt-4 sm:mt-6">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {product.user.nickname}
+                  </span>
+                  <Link
+                    href={`/app/products/${product.id}`}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition"
+                    title={t('products.seeMoreDetails')}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+

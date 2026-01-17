@@ -1,0 +1,519 @@
+'use client'
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import franc from 'franc'
+
+export type Locale = 'ca' | 'es' | 'en'
+
+interface I18nContextType {
+  locale: Locale
+  setLocale: (locale: Locale) => void
+  t: (key: string, params?: Record<string, string | number>) => string
+  translateText: (text: string, targetLocale?: Locale) => Promise<string>
+}
+
+const I18nContext = createContext<I18nContextType | undefined>(undefined)
+
+const translations: Record<Locale, Record<string, string>> = {
+  ca: {
+    'common.appName': 'Xarxa Anglesola',
+    'common.loading': 'Carregant...',
+    'common.error': 'Error',
+    'common.save': 'Desar',
+    'common.cancel': 'Cancel·lar',
+    'common.delete': 'Eliminar',
+    'common.edit': 'Editar',
+    'common.send': 'Enviar',
+    'common.close': 'Tancar',
+    'common.back': 'Tornar',
+    'common.translate': 'Traduir',
+    'auth.title': 'Xarxa Anglesola',
+    'auth.subtitle': 'Intercanvi de Productes',
+    'auth.nickname': 'Usuari',
+    'auth.nicknamePlaceholder': 'Introdueix el teu usuari',
+    'auth.password': 'Contrasenya',
+    'auth.passwordPlaceholder': 'Introdueix la teva contrasenya',
+    'auth.confirmPassword': 'Confirma la contrasenya',
+    'auth.confirmPasswordPlaceholder': 'Introdueix de nou la contrasenya',
+    'auth.email': 'Email',
+    'auth.emailPlaceholder': 'Introdueix el teu email',
+    'auth.newUser': 'Sóc un usuari nou',
+    'auth.register': 'Registrar-se',
+    'auth.nicknameRequired': 'L\'usuari és obligatori',
+    'auth.passwordRequired': 'La contrasenya és obligatòria',
+    'auth.confirmPasswordRequired': 'La confirmació de contrasenya és obligatòria',
+    'auth.emailRequired': 'L\'email és obligatori',
+    'auth.emailInvalid': 'Format d\'email invàlid',
+    'auth.passwordsDoNotMatch': 'Les contrasenyes no coincideixen',
+    'auth.passwordMinLength': 'La contrasenya ha de tenir almenys 6 caràcters',
+    'auth.nicknameMinLength': 'L\'usuari ha de tenir almenys 3 caràcters',
+    'auth.error': 'Error al iniciar sessió',
+    'auth.connectionError': 'Error de connexió. Torna-ho a intentar.',
+    'auth.enter': 'Entrar',
+    'auth.forgotPassword': 'He oblidat la contrasenya',
+    'auth.forgotPasswordTitle': 'Recuperar contrasenya',
+    'auth.forgotPasswordDescription': 'Introdueix el teu email i t\'enviarem un enllaç per restablir la teva contrasenya.',
+    'auth.forgotPasswordSuccess': 'Si l\'email existeix, s\'ha enviat un enllaç de recuperació al teu correu.',
+    'auth.forgotPasswordError': 'Error sol·licitant la recuperació de contrasenya',
+    'auth.sendResetLink': 'Enviar enllaç',
+    'auth.resetPasswordTitle': 'Restablir contrasenya',
+    'auth.resetPasswordDescription': 'Introdueix la teva nova contrasenya',
+    'auth.newPassword': 'Nova contrasenya',
+    'auth.resetPassword': 'Restablir contrasenya',
+    'auth.resetPasswordSuccess': 'Contrasenya restablida correctament. Redirigint...',
+    'auth.resetPasswordError': 'Error restablint la contrasenya',
+    'auth.invalidToken': 'Token invàlid o expirat. Sol·licita un nou enllaç de recuperació.',
+    'auth.backToLogin': 'Tornar al login',
+    'auth.redirectingToLogin': 'Redirigint al login...',
+    'nav.products': 'Productes',
+    'nav.favorites': 'Preferits',
+    'nav.myProducts': 'Els meus productes',
+    'nav.chat': 'Xat General',
+    'nav.hello': 'Hola, {nickname}!',
+    'nav.logout': 'Sortir',
+    'products.title': 'Productes',
+    'products.newProduct': '+ Nou Producte',
+    'products.noProducts': 'No hi ha productes disponibles',
+    'products.publishedBy': 'Publicat per',
+    'products.publishedOn': 'Publicat el',
+    'products.description': 'Descripció',
+    'products.contact': 'Contactar',
+    'products.reserved': 'Reservat',
+    'products.unreserved': 'Desreservar',
+    'products.reserve': 'Reservar',
+    'products.prestec': 'Préstec',
+    'products.prestecTitle': 'Marcar com a préstec',
+    'products.unprestecTitle': 'Desmarcar com a préstec',
+    'products.deleteConfirm': 'Estàs segur que vols eliminar aquest producte?',
+    'products.addToFavorites': 'Afegir a preferits',
+    'products.removeFromFavorites': 'Eliminar de preferits',
+    'products.filters.name': 'Nom del producte',
+    'products.filters.user': 'Usuari',
+    'products.filters.dateFrom': 'Data des de',
+    'products.filters.dateTo': 'Data fins a',
+    'products.filters.namePlaceholder': 'Cerca per nom...',
+    'products.filters.userPlaceholder': 'Cerca per usuari...',
+    'products.filters.clearFilters': 'Esborrar filtres',
+    'products.filters.title': 'Filtres',
+    'products.showing': 'Mostrant {filtered} de {total} productes',
+    'products.noProductsPublished': 'Encara no hi ha productes publicats.',
+    'products.beFirst': 'Sigues el primer a publicar un producte!',
+    'products.noResults': "No s'han trobat productes amb els filtres seleccionats.",
+    'products.deleteProduct': 'Eliminar producte',
+    'products.seeMoreDetails': 'Veure més detalls',
+    'products.reserveTitle': 'Reservar',
+    'products.unreserveTitle': 'Desreservar',
+    'products.switchToGridView': 'Canviar a vista grid',
+    'products.switchToListView': 'Canviar a vista llista',
+    'favorites.title': 'Els meus preferits',
+    'favorites.noFavorites': 'Encara no tens cap producte als preferits.',
+    'favorites.explore': 'Explora productes →',
+    'myProducts.title': 'Els meus productes',
+    'myProducts.noProducts': 'Encara no has publicat cap producte.',
+    'myProducts.publishFirst': 'Publica el teu primer producte →',
+    'newProduct.title': 'Nou Producte',
+    'newProduct.name': 'Nom del producte *',
+    'newProduct.namePlaceholder': 'Introdueix el nom del producte',
+    'newProduct.description': 'Descripció',
+    'newProduct.descriptionPlaceholder': 'Introdueix una descripció del producte',
+    'newProduct.images': 'Imatges (màxim 4) *',
+    'newProduct.maxImages': 'Màxim 4 imatges',
+    'newProduct.upload': 'Pujar imatge',
+    'newProduct.create': 'Publicar Producte',
+    'newProduct.publishing': 'Publicant...',
+    'newProduct.nameRequired': 'El nom del producte és obligatori',
+    'newProduct.addImage': 'Afegeix almenys una imatge',
+    'newProduct.userNotAuth': 'Usuari no autenticat',
+    'newProduct.createError': 'Error al crear el producte',
+    'newProduct.connectionError': 'Error de connexió. Torna-ho a intentar.',
+    'productDetail.backToProducts': '← Tornar als productes',
+    'productDetail.loading': 'Carregant...',
+    'productDetail.notFound': 'Producte no trobat',
+    'productDetail.noImage': 'Sense imatge',
+    'productDetail.reserved': 'Reservat',
+    'productDetail.prestec': 'Préstec',
+    'productDetail.description': 'Descripció',
+    'productDetail.publishedBy': 'Publicat per',
+    'productDetail.publishedOn': 'Publicat el',
+    'productDetail.delete': 'Eliminar',
+    'productDetail.contact': 'Contactar',
+    'chat.general': '💬 Xat General',
+    'chat.privateWith': 'Xat amb {nickname}',
+    'chat.noMessages': 'No hi ha missatges encara. Sigues el primer a escriure!',
+    'chat.writeMessage': 'Escriu un missatge...',
+    'chat.writePrivateMessage': 'Escriu un missatge privat...',
+    'chat.connecting': 'Connectant...',
+    'chat.onlineUsers': 'Usuaris en línia',
+    'chat.noOnlineUsers': 'No hi ha altres usuaris en línia',
+    'chat.closeChat': 'Tancar xat',
+    'chat.startPrivateChat': 'Xat privat amb {nickname}',
+    'chat.send': 'Enviar',
+    'chat.today': 'Avui',
+    'chat.yesterday': 'Ahir',
+    'chat.dateSeparator': '{date}',
+  },
+  es: {
+    'common.appName': 'Xarxa Anglesola',
+    'common.loading': 'Cargando...',
+    'common.error': 'Error',
+    'common.save': 'Guardar',
+    'common.cancel': 'Cancelar',
+    'common.delete': 'Eliminar',
+    'common.edit': 'Editar',
+    'common.send': 'Enviar',
+    'common.close': 'Cerrar',
+    'common.back': 'Volver',
+    'common.translate': 'Traducir',
+    'auth.title': 'Xarxa Anglesola',
+    'auth.subtitle': 'Intercambio de Productos',
+    'auth.nickname': 'Usuario',
+    'auth.nicknamePlaceholder': 'Introduce tu usuario',
+    'auth.password': 'Contraseña',
+    'auth.passwordPlaceholder': 'Introduce tu contraseña',
+    'auth.confirmPassword': 'Confirma la contraseña',
+    'auth.confirmPasswordPlaceholder': 'Introduce de nuevo la contraseña',
+    'auth.email': 'Email',
+    'auth.emailPlaceholder': 'Introduce tu email',
+    'auth.newUser': 'Soy un usuario nuevo',
+    'auth.register': 'Registrarse',
+    'auth.nicknameRequired': 'El usuario es obligatorio',
+    'auth.passwordRequired': 'La contraseña es obligatoria',
+    'auth.confirmPasswordRequired': 'La confirmación de contraseña es obligatoria',
+    'auth.emailRequired': 'El email es obligatorio',
+    'auth.emailInvalid': 'Formato de email inválido',
+    'auth.passwordsDoNotMatch': 'Las contraseñas no coinciden',
+    'auth.passwordMinLength': 'La contraseña debe tener al menos 6 caracteres',
+    'auth.nicknameMinLength': 'El usuario debe tener al menos 3 caracteres',
+    'auth.error': 'Error al iniciar sesión',
+    'auth.connectionError': 'Error de conexión. Vuelve a intentarlo.',
+    'auth.enter': 'Entrar',
+    'auth.forgotPassword': 'He olvidado la contraseña',
+    'auth.forgotPasswordTitle': 'Recuperar contraseña',
+    'auth.forgotPasswordDescription': 'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.',
+    'auth.forgotPasswordSuccess': 'Si el email existe, se ha enviado un enlace de recuperación a tu correo.',
+    'auth.forgotPasswordError': 'Error solicitando la recuperación de contraseña',
+    'auth.sendResetLink': 'Enviar enlace',
+    'auth.resetPasswordTitle': 'Restablecer contraseña',
+    'auth.resetPasswordDescription': 'Introduce tu nueva contraseña',
+    'auth.newPassword': 'Nueva contraseña',
+    'auth.resetPassword': 'Restablecer contraseña',
+    'auth.resetPasswordSuccess': 'Contraseña restablecida correctamente. Redirigiendo...',
+    'auth.resetPasswordError': 'Error restableciendo la contraseña',
+    'auth.invalidToken': 'Token inválido o expirado. Solicita un nuevo enlace de recuperación.',
+    'auth.backToLogin': 'Volver al login',
+    'auth.redirectingToLogin': 'Redirigiendo al login...',
+    'nav.products': 'Productos',
+    'nav.favorites': 'Favoritos',
+    'nav.myProducts': 'Mis productos',
+    'nav.chat': 'Chat General',
+    'nav.notes': 'Notas',
+    'nav.hello': '¡Hola, {nickname}!',
+    'nav.logout': 'Salir',
+    'products.title': 'Productos',
+    'products.newProduct': '+ Nuevo Producto',
+    'products.noProducts': 'No hay productos disponibles',
+    'products.publishedBy': 'Publicado por',
+    'products.publishedOn': 'Publicado el',
+    'products.description': 'Descripción',
+    'products.contact': 'Contactar',
+    'products.reserved': 'Reservado',
+    'products.unreserved': 'Desreservar',
+    'products.prestec': 'Préstamo',
+    'products.prestecTitle': 'Marcar como préstamo',
+    'products.unprestecTitle': 'Desmarcar como préstamo',
+    'products.reserve': 'Reservar',
+    'products.deleteConfirm': '¿Estás seguro de que quieres eliminar este producto?',
+    'products.addToFavorites': 'Añadir a favoritos',
+    'products.removeFromFavorites': 'Eliminar de favoritos',
+    'products.filters.name': 'Nombre del producto',
+    'products.filters.user': 'Usuario',
+    'products.filters.dateFrom': 'Fecha desde',
+    'products.filters.dateTo': 'Fecha hasta',
+    'products.filters.namePlaceholder': 'Buscar por nombre...',
+    'products.filters.userPlaceholder': 'Buscar por usuario...',
+    'products.filters.clearFilters': 'Borrar filtros',
+    'products.filters.title': 'Filtros',
+    'products.showing': 'Mostrando {filtered} de {total} productos',
+    'products.noProductsPublished': 'Aún no hay productos publicados.',
+    'products.beFirst': '¡Sé el primero en publicar un producto!',
+    'products.noResults': 'No se han encontrado productos con los filtros seleccionados.',
+    'products.deleteProduct': 'Eliminar producto',
+    'products.seeMoreDetails': 'Ver más detalles',
+    'products.reserveTitle': 'Reservar',
+    'products.unreserveTitle': 'Desreservar',
+    'favorites.title': 'Mis favoritos',
+    'favorites.noFavorites': 'Aún no tienes ningún producto en tus favoritos.',
+    'favorites.explore': 'Explora productos →',
+    'myProducts.title': 'Mis productos',
+    'myProducts.noProducts': 'Aún no has publicado ningún producto.',
+    'myProducts.publishFirst': 'Publica tu primer producto →',
+    'newProduct.title': 'Nuevo Producto',
+    'newProduct.name': 'Nombre del producto *',
+    'newProduct.namePlaceholder': 'Introduce el nombre del producto',
+    'newProduct.description': 'Descripción',
+    'newProduct.descriptionPlaceholder': 'Introduce una descripción del producto',
+    'newProduct.images': 'Imágenes (máximo 4) *',
+    'newProduct.maxImages': 'Máximo 4 imágenes',
+    'newProduct.upload': 'Subir imagen',
+    'newProduct.create': 'Publicar Producto',
+    'newProduct.publishing': 'Publicando...',
+    'newProduct.nameRequired': 'El nombre del producto es obligatorio',
+    'newProduct.addImage': 'Añade al menos una imagen',
+    'newProduct.userNotAuth': 'Usuario no autenticado',
+    'newProduct.createError': 'Error al crear el producto',
+    'newProduct.connectionError': 'Error de conexión. Vuelve a intentarlo.',
+    'productDetail.backToProducts': '← Volver a los productos',
+    'productDetail.loading': 'Cargando...',
+    'productDetail.notFound': 'Producto no encontrado',
+    'productDetail.noImage': 'Sin imagen',
+    'productDetail.reserved': 'Reservado',
+    'productDetail.prestec': 'Préstamo',
+    'productDetail.description': 'Descripción',
+    'productDetail.publishedBy': 'Publicado por',
+    'productDetail.publishedOn': 'Publicado el',
+    'productDetail.delete': 'Eliminar',
+    'productDetail.contact': 'Contactar',
+    'chat.general': '💬 Chat General',
+    'chat.privateWith': 'Chat con {nickname}',
+    'chat.noMessages': 'No hay mensajes todavía. ¡Sé el primero en escribir!',
+    'chat.writeMessage': 'Escribe un mensaje...',
+    'chat.writePrivateMessage': 'Escribe un mensaje privado...',
+    'chat.connecting': 'Conectando...',
+    'chat.onlineUsers': 'Usuarios en línea',
+    'chat.noOnlineUsers': 'No hay otros usuarios en línea',
+    'chat.closeChat': 'Cerrar chat',
+    'chat.startPrivateChat': 'Chat privado con {nickname}',
+    'chat.send': 'Enviar',
+    'chat.today': 'Hoy',
+    'chat.yesterday': 'Ayer',
+    'chat.dateSeparator': '{date}',
+  },
+  en: {
+    'common.appName': 'Xarxa Anglesola',
+    'common.loading': 'Loading...',
+    'common.error': 'Error',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.delete': 'Delete',
+    'common.edit': 'Edit',
+    'common.send': 'Send',
+    'common.close': 'Close',
+    'common.back': 'Back',
+    'common.translate': 'Translate',
+      'auth.title': 'Xarxa Anglesola',
+      'auth.subtitle': 'Product Exchange',
+      'auth.nickname': 'Username',
+      'auth.nicknamePlaceholder': 'Enter your username',
+      'auth.password': 'Password',
+      'auth.passwordPlaceholder': 'Enter your password',
+      'auth.confirmPassword': 'Confirm password',
+      'auth.confirmPasswordPlaceholder': 'Enter password again',
+      'auth.email': 'Email',
+      'auth.emailPlaceholder': 'Enter your email',
+      'auth.newUser': 'I am a new user',
+      'auth.register': 'Register',
+      'auth.nicknameRequired': 'Username is required',
+      'auth.passwordRequired': 'Password is required',
+      'auth.confirmPasswordRequired': 'Password confirmation is required',
+      'auth.emailRequired': 'Email is required',
+      'auth.emailInvalid': 'Invalid email format',
+      'auth.passwordsDoNotMatch': 'Passwords do not match',
+      'auth.passwordMinLength': 'Password must be at least 6 characters',
+      'auth.nicknameMinLength': 'Username must be at least 3 characters',
+      'auth.error': 'Login error',
+      'auth.connectionError': 'Connection error. Please try again.',
+      'auth.enter': 'Enter',
+      'auth.forgotPassword': 'Forgot password',
+      'auth.forgotPasswordTitle': 'Recover password',
+      'auth.forgotPasswordDescription': 'Enter your email and we will send you a link to reset your password.',
+      'auth.forgotPasswordSuccess': 'If the email exists, a recovery link has been sent to your email.',
+      'auth.forgotPasswordError': 'Error requesting password recovery',
+      'auth.sendResetLink': 'Send link',
+      'auth.resetPasswordTitle': 'Reset password',
+      'auth.resetPasswordDescription': 'Enter your new password',
+      'auth.newPassword': 'New password',
+      'auth.resetPassword': 'Reset password',
+      'auth.resetPasswordSuccess': 'Password reset successfully. Redirecting...',
+      'auth.resetPasswordError': 'Error resetting password',
+      'auth.invalidToken': 'Invalid or expired token. Request a new recovery link.',
+      'auth.backToLogin': 'Back to login',
+      'auth.redirectingToLogin': 'Redirecting to login...',
+    'nav.products': 'Products',
+    'nav.favorites': 'Favorites',
+    'nav.myProducts': 'My Products',
+    'nav.chat': 'General Chat',
+    'nav.notes': 'Notes',
+    'nav.hello': 'Hello, {nickname}!',
+    'nav.logout': 'Logout',
+    'products.title': 'Products',
+    'products.newProduct': '+ New Product',
+    'products.noProducts': 'No products available',
+    'products.publishedBy': 'Published by',
+    'products.publishedOn': 'Published on',
+    'products.description': 'Description',
+    'products.contact': 'Contact',
+      'products.reserved': 'Reserved',
+      'products.unreserved': 'Unreserve',
+      'products.prestec': 'Loan',
+      'products.prestecTitle': 'Mark as loan',
+      'products.unprestecTitle': 'Unmark as loan',
+    'products.reserve': 'Reserve',
+    'products.deleteConfirm': 'Are you sure you want to delete this product?',
+    'products.addToFavorites': 'Add to favorites',
+    'products.removeFromFavorites': 'Remove from favorites',
+    'products.filters.name': 'Product name',
+    'products.filters.user': 'User',
+    'products.filters.dateFrom': 'Date from',
+    'products.filters.dateTo': 'Date to',
+    'products.filters.namePlaceholder': 'Search by name...',
+    'products.filters.userPlaceholder': 'Search by user...',
+    'products.filters.clearFilters': 'Clear filters',
+    'products.filters.title': 'Filters',
+    'products.showing': 'Showing {filtered} of {total} products',
+    'products.noProductsPublished': 'No products have been published yet.',
+    'products.beFirst': 'Be the first to publish a product!',
+    'products.noResults': 'No products found with the selected filters.',
+    'products.deleteProduct': 'Delete product',
+      'products.seeMoreDetails': 'See more details',
+      'products.reserveTitle': 'Reserve',
+      'products.unreserveTitle': 'Unreserve',
+      'products.switchToGridView': 'Switch to grid view',
+      'products.switchToListView': 'Switch to list view',
+    'favorites.title': 'My Favorites',
+    'favorites.noFavorites': "You don't have any products in your favorites yet.",
+    'favorites.explore': 'Explore products →',
+    'myProducts.title': 'My Products',
+    'myProducts.noProducts': "You haven't published any products yet.",
+    'myProducts.publishFirst': 'Publish your first product →',
+    'newProduct.title': 'New Product',
+    'newProduct.name': 'Product name *',
+    'newProduct.namePlaceholder': 'Enter the product name',
+    'newProduct.description': 'Description',
+    'newProduct.descriptionPlaceholder': 'Enter a product description',
+    'newProduct.images': 'Images (maximum 4) *',
+    'newProduct.maxImages': 'Maximum 4 images',
+    'newProduct.upload': 'Upload image',
+    'newProduct.create': 'Publish Product',
+    'newProduct.publishing': 'Publishing...',
+    'newProduct.nameRequired': 'Product name is required',
+    'newProduct.addImage': 'Add at least one image',
+    'newProduct.userNotAuth': 'User not authenticated',
+    'newProduct.createError': 'Error creating product',
+    'newProduct.connectionError': 'Connection error. Please try again.',
+    'productDetail.backToProducts': '← Back to products',
+    'productDetail.loading': 'Loading...',
+    'productDetail.notFound': 'Product not found',
+    'productDetail.noImage': 'No image',
+    'productDetail.reserved': 'Reserved',
+    'productDetail.prestec': 'Loan',
+    'productDetail.description': 'Description',
+    'productDetail.publishedBy': 'Published by',
+    'productDetail.publishedOn': 'Published on',
+    'productDetail.delete': 'Delete',
+    'productDetail.contact': 'Contact',
+    'chat.general': '💬 General Chat',
+    'chat.privateWith': 'Chat with {nickname}',
+    'chat.noMessages': 'No messages yet. Be the first to write!',
+    'chat.writeMessage': 'Write a message...',
+    'chat.writePrivateMessage': 'Write a private message...',
+    'chat.connecting': 'Connecting...',
+    'chat.onlineUsers': 'Online users',
+    'chat.noOnlineUsers': 'No other users online',
+    'chat.closeChat': 'Close chat',
+    'chat.startPrivateChat': 'Private chat with {nickname}',
+    'chat.send': 'Send',
+    'chat.today': 'Today',
+    'chat.yesterday': 'Yesterday',
+    'chat.dateSeparator': '{date}',
+  },
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>('ca')
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem('locale') as Locale
+    if (savedLocale && (savedLocale === 'ca' || savedLocale === 'es' || savedLocale === 'en')) {
+      setLocaleState(savedLocale)
+    }
+  }, [])
+
+  const setLocale = (newLocale: Locale) => {
+    setLocaleState(newLocale)
+    localStorage.setItem('locale', newLocale)
+  }
+
+  const t = (key: string, params?: Record<string, string | number>): string => {
+    const translation = translations[locale][key] || key
+    if (params) {
+      return Object.entries(params).reduce(
+        (str, [paramKey, paramValue]) => str.replace(`{${paramKey}}`, String(paramValue)),
+        translation
+      )
+    }
+    return translation
+  }
+
+  const translateText = async (text: string, targetLocale?: Locale): Promise<string> => {
+    const target = targetLocale || locale
+    
+    try {
+      // Detectar l'idioma del text d'entrada utilitzant franc
+      const detectedLang = franc(text, { minLength: 3 })
+      
+      // Mapejar els codis d'idioma detectats per franc als codis que espera MyMemory API
+      const langCodeMap: Record<string, string> = {
+        'cat': 'ca',  // Català
+        'spa': 'es',  // Castellà (Spanish)
+        'eng': 'en',  // Anglès (English)
+        'ca': 'ca',   // Per si ja ve en format curt
+        'es': 'es',
+        'en': 'en'
+      }
+      
+      const sourceLang = langCodeMap[detectedLang] || 'en' // Per defecte anglès si no es detecta
+      
+      // Mapejar els codis d'idioma de l'app als que espera l'API
+      const localeMap: Record<Locale, string> = {
+        'ca': 'ca',
+        'es': 'es',
+        'en': 'en'
+      }
+      
+      const targetLang = localeMap[target]
+      
+      // Si l'idioma detectat ja és el mateix que l'objectiu, retornar el text sense canvis
+      if (sourceLang === targetLang) {
+        return text
+      }
+      
+      // Usar l'API gratuïta de MyMemory Translation amb l'idioma detectat
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`
+      )
+      const data = await response.json()
+      if (data.responseData && data.responseData.translatedText) {
+        return data.responseData.translatedText
+      }
+      return text
+    } catch (error) {
+      console.error('Error translating text:', error)
+      return text
+    }
+  }
+
+  return (
+    <I18nContext.Provider value={{ locale, setLocale, t, translateText }}>
+      {children}
+    </I18nContext.Provider>
+  )
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext)
+  if (!context) {
+    throw new Error('useI18n must be used within I18nProvider')
+  }
+  return context
+}
+

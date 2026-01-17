@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Forçar que els inputs de tipus date dins dels filtres tinguin la mateixa amplada */
+input[type="date"]#filter-date-from {
+  min-width: 0 !important;
+}
+
+/* Animacions per al drawer d'usuaris en línia */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Animació automàtica per al logo difuminat */
+/* El logo es mou lleugerament i gira lentament, alternant entre sentit de les agulles del rellotge i sentit contrari */
+@keyframes logo-idle {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  12.5% {
+    transform: translate(8px, -8px) rotate(45deg);
+  }
+  25% {
+    transform: translate(15px, -5px) rotate(90deg);
+  }
+  37.5% {
+    transform: translate(12px, 5px) rotate(135deg);
+  }
+  50% {
+    transform: translate(0, 10px) rotate(180deg);
+  }
+  62.5% {
+    transform: translate(-12px, 5px) rotate(225deg);
+  }
+  75% {
+    transform: translate(-15px, -5px) rotate(270deg);
+  }
+  87.5% {
+    transform: translate(-8px, -8px) rotate(315deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+  }
+}
+
+@keyframes logo-idle-reverse {
+  0% {
+    transform: translate(0, 0) rotate(360deg);
+  }
+  12.5% {
+    transform: translate(-8px, -8px) rotate(315deg);
+  }
+  25% {
+    transform: translate(-15px, -5px) rotate(270deg);
+  }
+  37.5% {
+    transform: translate(-12px, 5px) rotate(225deg);
+  }
+  50% {
+    transform: translate(0, 10px) rotate(180deg);
+  }
+  62.5% {
+    transform: translate(12px, 5px) rotate(135deg);
+  }
+  75% {
+    transform: translate(15px, -5px) rotate(90deg);
+  }
+  87.5% {
+    transform: translate(8px, -8px) rotate(45deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+.animate-logo-idle {
+  animation: logo-idle 25s ease-in-out infinite;
+}
+
+.animate-logo-idle-reverse {
+  animation: logo-idle-reverse 25s ease-in-out infinite;
+}
+

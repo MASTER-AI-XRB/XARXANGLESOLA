@@ -1,0 +1,101 @@
+{
+  "common": {
+    "appName": "Xarxa Anglesola",
+    "loading": "Carregant...",
+    "error": "Error",
+    "save": "Desar",
+    "cancel": "Cancel·lar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "send": "Enviar",
+    "close": "Tancar",
+    "back": "Tornar",
+    "next": "Següent",
+    "previous": "Anterior",
+    "search": "Cercar",
+    "filter": "Filtrar",
+    "clearFilters": "Esborrar filtres",
+    "noResults": "No s'han trobat resultats",
+    "translate": "Traduir"
+  },
+  "auth": {
+    "title": "Xarxa Anglesola",
+    "subtitle": "Intercanvi de Productes",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Introdueix el teu nickname",
+    "enter": "Entrar",
+    "error": "Error al iniciar sessió",
+    "nicknameRequired": "Si us plau, introdueix un nickname",
+    "nicknameMinLength": "El nickname ha de tenir almenys 3 caràcters",
+    "connectionError": "Error de connexió. Torna-ho a intentar."
+  },
+  "nav": {
+    "products": "Productes",
+    "favorites": "Preferits",
+    "myProducts": "Els meus productes",
+    "chat": "Xat General",
+    "hello": "Hola, {nickname}!",
+    "logout": "Sortir"
+  },
+  "products": {
+    "title": "Productes",
+    "newProduct": "+ Nou Producte",
+    "noProducts": "No hi ha productes disponibles",
+    "publishedBy": "Publicat per",
+    "publishedOn": "Publicat el",
+    "seeMore": "Veure més",
+    "description": "Descripció",
+    "contact": "Contactar",
+    "reserved": "Reservat",
+    "unreserved": "Desreservar",
+    "reserve": "Reservar",
+    "deleteConfirm": "Estàs segur que vols eliminar aquest producte?",
+    "addToFavorites": "Afegir a preferits",
+    "removeFromFavorites": "Eliminar de preferits",
+    "filters": {
+      "name": "Nom del producte",
+      "user": "Usuari",
+      "dateFrom": "Data des de",
+      "dateTo": "Data fins a",
+      "namePlaceholder": "Cerca per nom...",
+      "userPlaceholder": "Cerca per usuari..."
+    }
+  },
+  "favorites": {
+    "title": "Preferits",
+    "noFavorites": "Encara no tens cap producte als teus preferits.",
+    "addFirst": "Afegeix el teu primer preferit →"
+  },
+  "myProducts": {
+    "title": "Els meus productes",
+    "noProducts": "Encara no has publicat cap producte.",
+    "publishFirst": "Publica el teu primer producte →"
+  },
+  "newProduct": {
+    "title": "Nou Producte",
+    "name": "Nom del producte",
+    "namePlaceholder": "Introdueix el nom del producte",
+    "description": "Descripció (opcional)",
+    "descriptionPlaceholder": "Introdueix una descripció del producte",
+    "images": "Imatges",
+    "maxImages": "Màxim 4 imatges",
+    "upload": "Pujar imatge",
+    "create": "Crear producte",
+    "nameRequired": "El nom del producte és obligatori",
+    "atLeastOneImage": "Has de pujar almenys una imatge",
+    "maxFourImages": "Màxim 4 imatges"
+  },
+  "chat": {
+    "general": "💬 Xat General",
+    "privateWith": "Xat amb {nickname}",
+    "noMessages": "No hi ha missatges encara. Sigues el primer a escriure!",
+    "writeMessage": "Escriu un missatge...",
+    "writePrivateMessage": "Escriu un missatge privat...",
+    "connecting": "Connectant...",
+    "onlineUsers": "Usuaris en línia",
+    "closeChat": "Tancar xat",
+    "startPrivateChat": "Xat privat amb {nickname}",
+    "backToGeneral": "Tornar al xat general"
+  }
+}
+

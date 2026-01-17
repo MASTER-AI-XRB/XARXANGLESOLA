@@ -1,0 +1,101 @@
+{
+  "common": {
+    "appName": "Xarxa Anglesola",
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "send": "Send",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "clearFilters": "Clear filters",
+    "noResults": "No results found",
+    "translate": "Translate"
+  },
+  "auth": {
+    "title": "Xarxa Anglesola",
+    "subtitle": "Product Exchange",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter your nickname",
+    "enter": "Enter",
+    "error": "Login error",
+    "nicknameRequired": "Please enter a nickname",
+    "nicknameMinLength": "Nickname must be at least 3 characters",
+    "connectionError": "Connection error. Please try again."
+  },
+  "nav": {
+    "products": "Products",
+    "favorites": "Favorites",
+    "myProducts": "My Products",
+    "chat": "General Chat",
+    "hello": "Hello, {nickname}!",
+    "logout": "Logout"
+  },
+  "products": {
+    "title": "Products",
+    "newProduct": "+ New Product",
+    "noProducts": "No products available",
+    "publishedBy": "Published by",
+    "publishedOn": "Published on",
+    "seeMore": "See more",
+    "description": "Description",
+    "contact": "Contact",
+    "reserved": "Reserved",
+    "unreserved": "Unreserve",
+    "reserve": "Reserve",
+    "deleteConfirm": "Are you sure you want to delete this product?",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "filters": {
+      "name": "Product name",
+      "user": "User",
+      "dateFrom": "Date from",
+      "dateTo": "Date to",
+      "namePlaceholder": "Search by name...",
+      "userPlaceholder": "Search by user..."
+    }
+  },
+  "favorites": {
+    "title": "Favorites",
+    "noFavorites": "You don't have any products in your favorites yet.",
+    "addFirst": "Add your first favorite →"
+  },
+  "myProducts": {
+    "title": "My Products",
+    "noProducts": "You haven't published any products yet.",
+    "publishFirst": "Publish your first product →"
+  },
+  "newProduct": {
+    "title": "New Product",
+    "name": "Product name",
+    "namePlaceholder": "Enter the product name",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Enter a product description",
+    "images": "Images",
+    "maxImages": "Maximum 4 images",
+    "upload": "Upload image",
+    "create": "Create product",
+    "nameRequired": "Product name is required",
+    "atLeastOneImage": "You must upload at least one image",
+    "maxFourImages": "Maximum 4 images"
+  },
+  "chat": {
+    "general": "💬 General Chat",
+    "privateWith": "Chat with {nickname}",
+    "noMessages": "No messages yet. Be the first to write!",
+    "writeMessage": "Write a message...",
+    "writePrivateMessage": "Write a private message...",
+    "connecting": "Connecting...",
+    "onlineUsers": "Online users",
+    "closeChat": "Close chat",
+    "startPrivateChat": "Private chat with {nickname}",
+    "backToGeneral": "Back to general chat"
+  }
+}
+

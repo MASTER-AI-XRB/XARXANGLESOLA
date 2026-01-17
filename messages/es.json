@@ -1,0 +1,101 @@
+{
+  "common": {
+    "appName": "Xarxa Anglesola",
+    "loading": "Cargando...",
+    "error": "Error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "send": "Enviar",
+    "close": "Cerrar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clearFilters": "Borrar filtros",
+    "noResults": "No se han encontrado resultados",
+    "translate": "Traducir"
+  },
+  "auth": {
+    "title": "Xarxa Anglesola",
+    "subtitle": "Intercambio de Productos",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Introduce tu nickname",
+    "enter": "Entrar",
+    "error": "Error al iniciar sesión",
+    "nicknameRequired": "Por favor, introduce un nickname",
+    "nicknameMinLength": "El nickname debe tener al menos 3 caracteres",
+    "connectionError": "Error de conexión. Vuelve a intentarlo."
+  },
+  "nav": {
+    "products": "Productos",
+    "favorites": "Favoritos",
+    "myProducts": "Mis productos",
+    "chat": "Chat General",
+    "hello": "¡Hola, {nickname}!",
+    "logout": "Salir"
+  },
+  "products": {
+    "title": "Productos",
+    "newProduct": "+ Nuevo Producto",
+    "noProducts": "No hay productos disponibles",
+    "publishedBy": "Publicado por",
+    "publishedOn": "Publicado el",
+    "seeMore": "Ver más",
+    "description": "Descripción",
+    "contact": "Contactar",
+    "reserved": "Reservado",
+    "unreserved": "Desreservar",
+    "reserve": "Reservar",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este producto?",
+    "addToFavorites": "Añadir a favoritos",
+    "removeFromFavorites": "Eliminar de favoritos",
+    "filters": {
+      "name": "Nombre del producto",
+      "user": "Usuario",
+      "dateFrom": "Fecha desde",
+      "dateTo": "Fecha hasta",
+      "namePlaceholder": "Buscar por nombre...",
+      "userPlaceholder": "Buscar por usuario..."
+    }
+  },
+  "favorites": {
+    "title": "Favoritos",
+    "noFavorites": "Aún no tienes ningún producto en tus favoritos.",
+    "addFirst": "Añade tu primer favorito →"
+  },
+  "myProducts": {
+    "title": "Mis productos",
+    "noProducts": "Aún no has publicado ningún producto.",
+    "publishFirst": "Publica tu primer producto →"
+  },
+  "newProduct": {
+    "title": "Nuevo Producto",
+    "name": "Nombre del producto",
+    "namePlaceholder": "Introduce el nombre del producto",
+    "description": "Descripción (opcional)",
+    "descriptionPlaceholder": "Introduce una descripción del producto",
+    "images": "Imágenes",
+    "maxImages": "Máximo 4 imágenes",
+    "upload": "Subir imagen",
+    "create": "Crear producto",
+    "nameRequired": "El nombre del producto es obligatorio",
+    "atLeastOneImage": "Debes subir al menos una imagen",
+    "maxFourImages": "Máximo 4 imágenes"
+  },
+  "chat": {
+    "general": "💬 Chat General",
+    "privateWith": "Chat con {nickname}",
+    "noMessages": "No hay mensajes todavía. ¡Sé el primero en escribir!",
+    "writeMessage": "Escribe un mensaje...",
+    "writePrivateMessage": "Escribe un mensaje privado...",
+    "connecting": "Conectando...",
+    "onlineUsers": "Usuarios en línea",
+    "closeChat": "Cerrar chat",
+    "startPrivateChat": "Chat privado con {nickname}",
+    "backToGeneral": "Volver al chat general"
+  }
+}
+

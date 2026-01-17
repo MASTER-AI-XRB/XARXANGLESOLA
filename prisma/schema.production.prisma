@@ -1,0 +1,68 @@
+// Schema de Prisma per producció amb PostgreSQL
+// Copia aquest fitxer a schema.prisma quan despleguis a producció
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nickname  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  products  Product[]
+  messages  Message[]
+  favorites Favorite[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images      String   // JSON array of image paths
+  reserved    Boolean  @default(false)
+  prestec     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  favorites   Favorite[]
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomId    String   // "general" for general chat, or userId for private chat
+  isPrivate Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([roomId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
