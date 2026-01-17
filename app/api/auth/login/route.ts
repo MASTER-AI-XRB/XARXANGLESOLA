@@ -126,9 +126,14 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error en login:', error)
-    // No revelar detalls de l'error a l'usuari
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace')
+    // No revelar detalls de l'error a l'usuari, però logar-lo per debugging
     return NextResponse.json(
-      { error: 'Error al iniciar sessió' },
+      { 
+        error: 'Error al iniciar sessió',
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      },
       { status: 500 }
     )
   }
