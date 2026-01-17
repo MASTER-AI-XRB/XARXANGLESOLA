@@ -574,19 +574,19 @@ export default function ProductsPage() {
                         toggleFavorite(product.id, e)
                       }}
                       className={`rounded-full p-1 shadow-md transition ${
-                        favorites[product.id]
+                        favorites.has(product.id)
                           ? 'bg-red-500 hover:bg-red-600'
                           : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
-                      title={favorites[product.id] ? t('products.removeFromFavorites') : t('products.addToFavorites')}
+                      title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                     >
                       <svg
                         className={`w-3 h-3 ${
-                          favorites[product.id]
+                          favorites.has(product.id)
                             ? 'text-white'
                             : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
                         }`}
-                        fill={favorites[product.id] ? 'currentColor' : 'none'}
+                        fill={favorites.has(product.id) ? 'currentColor' : 'none'}
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >

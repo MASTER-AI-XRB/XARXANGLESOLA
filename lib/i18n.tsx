@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import franc from 'franc'
 
 export type Locale = 'ca' | 'es' | 'en'
 
@@ -458,20 +457,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const target = targetLocale || locale
     
     try {
-      // Detectar l'idioma del text d'entrada utilitzant franc
-      const detectedLang = franc(text, { minLength: 3 })
-      
-      // Mapejar els codis d'idioma detectats per franc als codis que espera MyMemory API
-      const langCodeMap: Record<string, string> = {
-        'cat': 'ca',  // Català
-        'spa': 'es',  // Castellà (Spanish)
-        'eng': 'en',  // Anglès (English)
-        'ca': 'ca',   // Per si ja ve en format curt
-        'es': 'es',
-        'en': 'en'
-      }
-      
-      const sourceLang = langCodeMap[detectedLang] || 'en' // Per defecte anglès si no es detecta
+      // Sense detecció d'idioma per evitar problemes amb franc en producció
+      // Assumir que el text està en un idioma diferent al target
+      const sourceLang = target === 'ca' ? 'es' : 'ca' // Alternativa simple
       
       // Mapejar els codis d'idioma de l'app als que espera l'API
       const localeMap: Record<Locale, string> = {
