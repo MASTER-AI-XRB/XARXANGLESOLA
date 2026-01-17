@@ -40,7 +40,7 @@ function checkRateLimit(key: string): boolean {
 // Netejar entrades antigues periòdicament
 setInterval(() => {
   const now = Date.now()
-  for (const [key, record] of rateLimitMap.entries()) {
+  for (const [key, record] of Array.from(rateLimitMap.entries())) {
     if (now > record.resetTime) {
       rateLimitMap.delete(key)
     }
