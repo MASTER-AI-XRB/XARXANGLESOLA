@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Forçar que aquesta ruta sigui dinàmica (no es pot pre-renderitzar)
+export const dynamic = 'force-dynamic'
+
 // Obtenir productes de l'usuari
 export async function GET(request: NextRequest) {
   try {
