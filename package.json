@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
+    "build:socket": "echo 'Skipping Next.js build for Socket.IO server'",
     "start": "cross-env NODE_ENV=production node server.js",
+    "start:socket": "node socket-server.js",
     "lint": "next lint",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
