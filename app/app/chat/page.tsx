@@ -78,20 +78,19 @@ export default function ChatPage() {
   useEffect(() => {
     if (!userId || !nickname) return
 
-    // Detectar si estem a producció (Vercel)
+    // Detectar la URL del socket de manera robusta
+    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
+    
+    // Si no hi ha URL configurada i estem a producció (Vercel), desactivar Socket.io
     const isProduction = typeof window !== 'undefined' && 
                          (window.location.hostname.includes('vercel.app') || 
                           window.location.hostname.includes('vercel.com'))
     
-    // Si estem a producció, desactivar Socket.io temporalment
-    if (isProduction) {
-      console.warn('Socket.io desactivat a producció. El xat no estarà disponible.')
+    if (isProduction && !socketUrl) {
+      console.warn('Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
       setConnected(false)
       return
     }
-
-    // Detectar la URL del socket de manera robusta
-    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
     
     if (!socketUrl && typeof window !== 'undefined') {
       const hostname = window.location.hostname
@@ -365,18 +364,20 @@ export default function ChatPage() {
     ? privateChats[activePrivateChat] || []
     : messages
 
-  // Detectar si estem a producció (Vercel)
+  // Detectar si estem a producció (Vercel) i si Socket.IO està configurat
   const isProduction = typeof window !== 'undefined' && 
                        (window.location.hostname.includes('vercel.app') || 
                         window.location.hostname.includes('vercel.com'))
+  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
+  const showSocketWarning = isProduction && !socketUrl && !connected
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900 overflow-hidden h-[calc(100vh-12rem)] sm:h-[calc(100vh-7rem)] flex flex-col">
-        {isProduction && (
+        {showSocketWarning && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-3 text-center">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              {t('chat.disabledProduction')}
+              {t('chat.disabledProduction') || 'El xat requereix configuració. Configura NEXT_PUBLIC_SOCKET_URL per activar-lo.'}
             </p>
           </div>
         )}

@@ -93,9 +93,14 @@
     "writePrivateMessage": "Escriu un missatge privat...",
     "connecting": "Connectant...",
     "onlineUsers": "Usuaris en línia",
+    "noOnlineUsers": "No hi ha altres usuaris en línia",
     "closeChat": "Tancar xat",
     "startPrivateChat": "Xat privat amb {nickname}",
-    "backToGeneral": "Tornar al xat general"
+    "backToGeneral": "Tornar al xat general",
+    "send": "Enviar",
+    "today": "Avui",
+    "yesterday": "Ahir",
+    "disabledProduction": "El xat requereix configuració. Configura NEXT_PUBLIC_SOCKET_URL per activar-lo."
   }
 }
 

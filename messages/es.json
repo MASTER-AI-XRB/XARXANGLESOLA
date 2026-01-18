@@ -93,9 +93,14 @@
     "writePrivateMessage": "Escribe un mensaje privado...",
     "connecting": "Conectando...",
     "onlineUsers": "Usuarios en línea",
+    "noOnlineUsers": "No hay otros usuarios en línea",
     "closeChat": "Cerrar chat",
     "startPrivateChat": "Chat privado con {nickname}",
-    "backToGeneral": "Volver al chat general"
+    "backToGeneral": "Volver al chat general",
+    "send": "Enviar",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "disabledProduction": "El chat requiere configuración. Configura NEXT_PUBLIC_SOCKET_URL para activarlo."
   }
 }
 

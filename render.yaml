@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: xarxanglesola-socket
+    env: node
+    buildCommand: npm install && npx prisma generate
+    startCommand: node socket-server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_ALLOWED_ORIGINS
+        sync: false

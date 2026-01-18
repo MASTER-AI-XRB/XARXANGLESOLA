@@ -47,6 +47,10 @@
   },
   "description": "Aplicació web per a intercanviar productes amb sistema de xat en temps real.",
   "main": "next.config.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "directories": {
     "lib": "lib"
   },

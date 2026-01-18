@@ -93,9 +93,14 @@
     "writePrivateMessage": "Write a private message...",
     "connecting": "Connecting...",
     "onlineUsers": "Online users",
+    "noOnlineUsers": "No other users online",
     "closeChat": "Close chat",
     "startPrivateChat": "Private chat with {nickname}",
-    "backToGeneral": "Back to general chat"
+    "backToGeneral": "Back to general chat",
+    "send": "Send",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "disabledProduction": "Chat requires configuration. Set NEXT_PUBLIC_SOCKET_URL to enable it."
   }
 }
 
