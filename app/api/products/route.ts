@@ -27,6 +27,14 @@ export async function GET() {
     return NextResponse.json(productsWithParsedImages)
   } catch (error) {
     console.error('Error carregant productes:', error)
+    
+    // Logging detallat
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    
     return NextResponse.json(
       { error: 'Error carregant productes' },
       { status: 500 }
@@ -150,8 +158,21 @@ export async function POST(request: NextRequest) {
           imagePaths.push(blob.url)
         } catch (blobError) {
           console.error('Error pujant imatge a Blob:', blobError)
+          
+          // Logging detallat
+          if (blobError instanceof Error) {
+            console.error('Blob error name:', blobError.name)
+            console.error('Blob error message:', blobError.message)
+            console.error('Blob error stack:', blobError.stack)
+          }
+          
+          // Verificar si és un error d'autenticació amb Blob
+          const errorMessage = blobError instanceof Error && blobError.message.includes('token')
+            ? 'Error d\'autenticació amb Vercel Blob. Verifica BLOB_READ_WRITE_TOKEN.'
+            : 'Error al pujar imatges a Vercel Blob'
+          
           return NextResponse.json(
-            { error: 'Error al pujar imatges a Vercel Blob' },
+            { error: errorMessage },
             { status: 500 }
           )
         }
@@ -181,8 +202,21 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creant producte:', error)
+    
+    // Logging detallat per diagnosticar
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    
+    // Retornar més informació en desenvolupament
+    const errorMessage = process.env.NODE_ENV === 'production'
+      ? 'Error al crear el producte'
+      : error instanceof Error ? error.message : 'Error desconegut'
+    
     return NextResponse.json(
-      { error: 'Error al crear el producte' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
