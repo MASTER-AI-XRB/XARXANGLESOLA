@@ -128,6 +128,18 @@ export async function POST(request: NextRequest) {
     console.error('Error en login:', error)
     console.error('Error details:', error instanceof Error ? error.message : String(error))
     console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
+    // Log més detallat per Vercel
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+    }
+    
+    // Verificar si és un error de Prisma
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('Prisma error code:', (error as any).code)
+    }
+    
     // No revelar detalls de l'error a l'usuari, però logar-lo per debugging
     return NextResponse.json(
       { 
@@ -136,6 +148,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+  } finally {
+    // Desconnectar Prisma després de cada operació a Vercel
+    await prisma.$disconnect().catch(() => {
+      // Ignorar errors de desconnexió
+    })
   }
 }
 

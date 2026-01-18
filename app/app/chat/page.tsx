@@ -78,6 +78,18 @@ export default function ChatPage() {
   useEffect(() => {
     if (!userId || !nickname) return
 
+    // Detectar si estem a producció (Vercel)
+    const isProduction = typeof window !== 'undefined' && 
+                         (window.location.hostname.includes('vercel.app') || 
+                          window.location.hostname.includes('vercel.com'))
+    
+    // Si estem a producció, desactivar Socket.io temporalment
+    if (isProduction) {
+      console.warn('Socket.io desactivat a producció. El xat no estarà disponible.')
+      setConnected(false)
+      return
+    }
+
     // Detectar la URL del socket de manera més robusta
     let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
     
@@ -316,9 +328,21 @@ export default function ChatPage() {
     ? privateChats[activePrivateChat] || []
     : messages
 
+  // Detectar si estem a producció (Vercel)
+  const isProduction = typeof window !== 'undefined' && 
+                       (window.location.hostname.includes('vercel.app') || 
+                        window.location.hostname.includes('vercel.com'))
+
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900 overflow-hidden h-[calc(100vh-12rem)] sm:h-[calc(100vh-7rem)] flex flex-col">
+        {isProduction && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-3 text-center">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              {t('chat.disabledProduction')}
+            </p>
+          </div>
+        )}
         <div className="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 flex items-center gap-2 overflow-x-auto flex-shrink-0">
           <button
             type="button"

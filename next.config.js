@@ -2,12 +2,20 @@
 const nextConfig = {
   images: {
     domains: ['localhost'],
-    remotePatterns: process.env.NEXT_PUBLIC_IMAGE_DOMAINS
-      ? process.env.NEXT_PUBLIC_IMAGE_DOMAINS.split(',').map((domain) => ({
-          protocol: 'https',
-          hostname: domain,
-        }))
-      : [],
+    remotePatterns: [
+      // Vercel Blob Storage
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+      },
+      // Altres dominis personalitzats
+      ...(process.env.NEXT_PUBLIC_IMAGE_DOMAINS
+        ? process.env.NEXT_PUBLIC_IMAGE_DOMAINS.split(',').map((domain) => ({
+            protocol: 'https',
+            hostname: domain,
+          }))
+        : []),
+    ],
   },
   // Exposar variables d'entorn al client
   env: {

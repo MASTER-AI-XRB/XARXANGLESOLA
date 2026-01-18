@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { put } from '@vercel/blob'
 import { validateProductName, validateDescription, validateImageFile, sanitizeString } from '@/lib/validation'
 
 export async function GET() {
@@ -95,25 +93,69 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Crear directori d'uploads si no existeix
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Guardar imatges
+    // Guardar imatges a Vercel Blob Storage
     const imagePaths: string[] = []
-    for (const image of images) {
-      const bytes = await image.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      
-      // Sanititzar el nom del fitxer
-      const sanitizedName = sanitizeString(image.name, 100)
-        .replace(/[^a-zA-Z0-9.-]/g, '_')
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}-${sanitizedName}`
-      const filepath = join(uploadsDir, filename)
-      await writeFile(filepath, buffer)
-      imagePaths.push(`/uploads/${filename}`)
+    
+    // Verificar si BLOB_READ_WRITE_TOKEN està configurat (Vercel Blob)
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.warn('BLOB_READ_WRITE_TOKEN no configurat, intentant usar sistema de fitxers local...')
+      // Fallback a sistema local (no funcionarà a Vercel però sí localment)
+      try {
+        const { writeFile, mkdir } = await import('fs/promises')
+        const { join } = await import('path')
+        const { existsSync } = await import('fs')
+        
+        const uploadsDir = join(process.cwd(), 'public', 'uploads')
+        if (!existsSync(uploadsDir)) {
+          await mkdir(uploadsDir, { recursive: true })
+        }
+
+        for (const image of images) {
+          const bytes = await image.arrayBuffer()
+          const buffer = Buffer.from(bytes)
+          
+          const sanitizedName = sanitizeString(image.name, 100)
+            .replace(/[^a-zA-Z0-9.-]/g, '_')
+          const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}-${sanitizedName}`
+          const filepath = join(uploadsDir, filename)
+          await writeFile(filepath, buffer)
+          imagePaths.push(`/uploads/${filename}`)
+        }
+      } catch (fallbackError) {
+        console.error('Error amb fallback local:', fallbackError)
+        return NextResponse.json(
+          { error: 'Error al pujar imatges. Configura Vercel Blob Storage per producció.' },
+          { status: 500 }
+        )
+      }
+    } else {
+      // Usar Vercel Blob Storage
+      for (const image of images) {
+        try {
+          const bytes = await image.arrayBuffer()
+          const buffer = Buffer.from(bytes)
+          
+          // Sanititzar el nom del fitxer
+          const sanitizedName = sanitizeString(image.name, 100)
+            .replace(/[^a-zA-Z0-9.-]/g, '_')
+          const filename = `product-${Date.now()}-${Math.random().toString(36).substring(7)}-${sanitizedName}`
+          
+          // Pujar a Vercel Blob
+          const blob = await put(filename, buffer, {
+            access: 'public',
+            addRandomSuffix: true,
+            contentType: image.type,
+          })
+          
+          imagePaths.push(blob.url)
+        } catch (blobError) {
+          console.error('Error pujant imatge a Blob:', blobError)
+          return NextResponse.json(
+            { error: 'Error al pujar imatges a Vercel Blob' },
+            { status: 500 }
+          )
+        }
+      }
     }
 
     // Crear producte
