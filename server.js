@@ -52,27 +52,44 @@ app.prepare().then(() => {
   const localIP = getLocalIP()
   console.log('🔍 IP local detectada:', localIP)
   
-  const allowedOrigins = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS
-    ? process.env.NEXT_PUBLIC_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : dev 
-      ? [
-          `http://localhost:${port}`,
-          `http://${localIP}:${port}`,
-          `http://127.0.0.1:${port}`,
-          `https://localhost:${port}`,
-          `https://${localIP}:${port}`,
-          // Afegir qualsevol IP de la xarxa local (192.168.x.x)
-          ...(localIP.startsWith('192.168.') ? [
-            `http://192.168.1.130:${port}`,
-            `http://192.168.1.131:${port}`,
-            `http://192.168.1.132:${port}`,
-            `http://192.168.1.133:${port}`,
-            `http://192.168.1.134:${port}`,
-            `http://192.168.1.135:${port}`,
-          ] : [])
-        ]
-      : [process.env.NEXT_PUBLIC_APP_URL || `https://${hostname}`]
+  // Generar llista dinàmica d'orígens permesos
+  const generateAllowedOrigins = () => {
+    const origins = new Set()
+    
+    // Afegir orígens de variables d'entorn
+    if (process.env.NEXT_PUBLIC_ALLOWED_ORIGINS) {
+      process.env.NEXT_PUBLIC_ALLOWED_ORIGINS.split(',').forEach(origin => {
+        origins.add(origin.trim())
+      })
+    }
+    
+    if (dev) {
+      // En desenvolupament, permetre múltiples orígens
+      origins.add(`http://localhost:${port}`)
+      origins.add(`http://127.0.0.1:${port}`)
+      origins.add(`http://${localIP}:${port}`)
+      
+      // Afegir variants comunes de la IP local
+      if (localIP && localIP !== 'localhost') {
+        origins.add(`http://${localIP}:${port}`)
+        // Si la IP és de la xarxa local, afegir variants comunes
+        if (localIP.startsWith('192.168.')) {
+          const baseIP = localIP.substring(0, localIP.lastIndexOf('.'))
+          for (let i = 130; i <= 140; i++) {
+            origins.add(`http://${baseIP}.${i}:${port}`)
+          }
+        }
+      }
+    } else {
+      // En producció, només l'URL de l'aplicació
+      const prodUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${hostname}`
+      origins.add(prodUrl)
+    }
+    
+    return Array.from(origins)
+  }
   
+  const allowedOrigins = generateAllowedOrigins()
   console.log('🔍 Orígens permesos per CORS:', allowedOrigins)
 
   // Crear servidor HTTP per Socket.io
@@ -91,8 +108,17 @@ app.prepare().then(() => {
         
         console.log(`🔍 Comprovant origen: ${origin}`)
         
-        // Comprovar si l'origen està a la llista de permesos
-        if (allowedOrigins.includes(origin)) {
+        // Normalitzar l'origen (eliminar port si és el port per defecte)
+        const normalizedOrigin = origin.replace(/:80$/, '').replace(/:443$/, '')
+        
+        // Comprovar si l'origen està a la llista de permesos (amb o sense port)
+        const isAllowed = allowedOrigins.some(allowed => {
+          const normalizedAllowed = allowed.replace(/:80$/, '').replace(/:443$/, '')
+          return origin === allowed || normalizedOrigin === normalizedAllowed ||
+                 origin.startsWith(allowed) || normalizedOrigin.startsWith(normalizedAllowed)
+        })
+        
+        if (isAllowed) {
           console.log(`✅ Origen permès: ${origin}`)
           callback(null, true)
         } else {
@@ -110,7 +136,7 @@ app.prepare().then(() => {
       },
       methods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
-      allowedHeaders: ['Content-Type'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     },
     pingTimeout: 60000,
     pingInterval: 25000,

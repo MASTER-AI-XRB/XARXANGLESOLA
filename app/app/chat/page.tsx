@@ -90,27 +90,29 @@ export default function ChatPage() {
       return
     }
 
-    // Detectar la URL del socket de manera més robusta
+    // Detectar la URL del socket de manera robusta
     let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
     
     if (!socketUrl && typeof window !== 'undefined') {
-      const origin = window.location.origin
       const hostname = window.location.hostname
+      const protocol = window.location.protocol
       
       console.log('🔍 Detectant URL del socket...')
-      console.log('  Hostname detectat:', hostname)
-      console.log('  Origin:', origin)
+      console.log('  Hostname:', hostname)
+      console.log('  Protocol:', protocol)
       
       // Si estem a localhost o 127.0.0.1, usar localhost:3001
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         socketUrl = 'http://localhost:3001'
         console.log('  → Usant localhost:3001')
       } else {
-        // Per IPs locals, usar la mateixa IP que s'està usant per accedir a l'app
-        // Usar directament el hostname de window.location que sempre serà correcte
-        socketUrl = `http://${hostname}:3001`
-        console.log('  → Usant hostname directe:', socketUrl)
-        console.log('  → Verificació: hostname és', hostname, 'i origin és', origin)
+        // Per IPs locals o altres hostnames, usar el mateix hostname amb port 3001
+        // Sempre usar HTTP per al socket (no HTTPS en desenvolupament)
+        const socketProtocol = hostname.includes('localhost') || hostname.match(/^\d+\.\d+\.\d+\.\d+$/) 
+          ? 'http' 
+          : protocol.replace(':', '')
+        socketUrl = `${socketProtocol}://${hostname}:3001`
+        console.log('  → Usant:', socketUrl)
       }
     }
     
@@ -162,10 +164,12 @@ export default function ChatPage() {
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
-      timeout: 45000,
-      forceNew: true,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: false,
       upgrade: true,
-      rememberUpgrade: false,
+      rememberUpgrade: true,
+      autoConnect: true,
     })
 
     newSocket.on('connect', () => {
@@ -175,7 +179,7 @@ export default function ChatPage() {
     })
 
     newSocket.on('connect_error', (error: any) => {
-      console.error('Error de connexió Socket.io:', error)
+      console.error('❌ Error de connexió Socket.io:', error)
       console.error('Detalls de l\'error:', {
         message: error.message,
         type: error.type,
@@ -184,6 +188,27 @@ export default function ChatPage() {
         context: error.context
       })
       console.error('URL intentada:', socketUrl)
+      setConnected(false)
+    })
+
+    newSocket.on('reconnect_attempt', (attemptNumber: number) => {
+      console.log(`🔄 Intentant reconnexió (intent ${attemptNumber}/10)...`)
+    })
+
+    newSocket.on('reconnect', (attemptNumber: number) => {
+      console.log(`✅ Reconnexió exitosa després de ${attemptNumber} intents`)
+      setConnected(true)
+      if (!activePrivateChat) {
+        newSocket.emit('join-general')
+      }
+    })
+
+    newSocket.on('reconnect_error', (error: any) => {
+      console.error('❌ Error en reconnexió:', error)
+    })
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('❌ Fallida la reconnexió després de tots els intents')
       setConnected(false)
     })
 
@@ -286,6 +311,18 @@ export default function ChatPage() {
       socket.emit('join-general')
     }
   }, [activePrivateChat, socket, connected])
+
+  // Gestió de reconnexió quan el socket es reconecta
+  useEffect(() => {
+    if (socket && connected) {
+      if (activePrivateChat) {
+        socket.emit('join-private', activePrivateChat)
+        socket.emit('load-private-messages', activePrivateChat)
+      } else {
+        socket.emit('join-general')
+      }
+    }
+  }, [socket, connected, activePrivateChat])
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault()
