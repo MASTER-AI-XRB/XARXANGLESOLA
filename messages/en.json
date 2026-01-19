@@ -119,7 +119,10 @@
     "notificationsEnabledMessage": "You will now receive browser notifications.",
     "notificationsDisabled": "Notifications disabled",
     "notificationsDisabledMessage": "You have denied notification permissions. You can enable them from your browser settings.",
-    "enabled": "Notifications enabled"
+    "enabled": "Notifications enabled",
+    "disableNotifications": "Disable notifications",
+    "disableInstructions": "Disable notifications",
+    "disableInstructionsMessage": "To disable notifications, go to your browser settings and block notification permissions for this website."
   }
 }
 

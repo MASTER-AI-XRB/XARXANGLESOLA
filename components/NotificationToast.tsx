@@ -75,9 +75,9 @@ export default function NotificationToast({ notification, onClose }: Notificatio
   }
 
   return (
-    <div className="max-w-sm w-full animate-slide-in-right">
+    <div className="max-w-sm w-full animate-slide-in-right pointer-events-auto">
       <div
-        className={`${typeStyles[notification.type]} text-white rounded-lg shadow-lg p-4 flex items-start gap-3`}
+        className={`${typeStyles[notification.type]} text-white rounded-lg shadow-lg p-4 flex items-start gap-3 cursor-default`}
       >
         <div className="flex-shrink-0">
           <svg

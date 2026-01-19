@@ -119,7 +119,10 @@
     "notificationsEnabledMessage": "Ahora recibirás notificaciones del navegador.",
     "notificationsDisabled": "Notificaciones desactivadas",
     "notificationsDisabledMessage": "Has denegado los permisos de notificación. Puedes activarlas desde la configuración del navegador.",
-    "enabled": "Notificaciones activadas"
+    "enabled": "Notificaciones activadas",
+    "disableNotifications": "Desactivar notificaciones",
+    "disableInstructions": "Desactivar notificaciones",
+    "disableInstructionsMessage": "Para desactivar las notificaciones, ve a la configuración de tu navegador y bloquea los permisos de notificación para este sitio web."
   }
 }
 
