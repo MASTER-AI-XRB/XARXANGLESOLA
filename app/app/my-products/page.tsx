@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 import TranslateButton from '@/components/TranslateButton'
 
 interface Product {
@@ -28,6 +29,7 @@ export default function MyProductsPage() {
   const router = useRouter()
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
   const { t } = useI18n()
+  const { theme } = useTheme()
 
   useEffect(() => {
     if (!userId) {
@@ -201,27 +203,29 @@ export default function MyProductsPage() {
                       e.stopPropagation()
                       toggleReserved(product.id, e)
                     }}
-                    className={`rounded-full p-1 shadow-md transition ${
+                    className={`rounded-full p-2 shadow-md transition ${
                       product.reserved
                         ? 'bg-yellow-500 hover:bg-yellow-600'
-                        : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        : 'bg-white dark:bg-white hover:bg-gray-100 dark:hover:bg-gray-100'
                     }`}
                     title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
                   >
                     {product.reserved ? (
                       <svg
-                        className="w-3 h-3 text-white"
+                        className="w-5 h-5 text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
+                        preserveAspectRatio="xMidYMid meet"
                       >
                         <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                       </svg>
                     ) : (
                       <svg
-                        className="w-3 h-3 text-gray-600 dark:text-gray-300"
+                        className="w-5 h-5 text-gray-600 dark:text-gray-800"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        preserveAspectRatio="xMidYMid meet"
                       >
                         <path
                           strokeLinecap="round"
@@ -239,15 +243,19 @@ export default function MyProductsPage() {
                       e.stopPropagation()
                       togglePrestec(product.id, e)
                     }}
-                    className="rounded-full p-1 shadow-md transition hover:opacity-80"
+                    className={`rounded-full p-2 shadow-md transition ${
+                      product.prestec
+                        ? 'bg-green-500 hover:bg-green-600'
+                        : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                    }`}
                     title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                   >
                     <Image
                       src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
                       alt={product.prestec ? t('products.prestec') : ''}
-                      width={12}
-                      height={12}
-                      className="w-3 h-3"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 object-contain"
                     />
                   </button>
                 </div>
@@ -283,7 +291,7 @@ export default function MyProductsPage() {
                       className={`rounded-full p-2 shadow-md transition ${
                         product.reserved
                           ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
                     >
@@ -318,7 +326,11 @@ export default function MyProductsPage() {
                         e.stopPropagation()
                         togglePrestec(product.id, e)
                       }}
-                      className="rounded-full p-2 shadow-md transition hover:opacity-80"
+                      className={`rounded-full p-2 shadow-md transition ${
+                        product.prestec
+                          ? 'bg-green-500 hover:bg-green-600'
+                          : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                      }`}
                       title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                     >
                       <Image

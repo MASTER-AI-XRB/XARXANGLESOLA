@@ -6,9 +6,19 @@ export default function DevConsole() {
   const [logs, setLogs] = useState<Array<{ type: string; message: string; timestamp: string }>>([])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isConsoleOpen, setIsConsoleOpen] = useState(false)
+  const [isLocal, setIsLocal] = useState(false)
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return
+    // Comprovar si estem en local (localhost o 127.0.0.1)
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')
+      setIsLocal(isLocalhost && process.env.NODE_ENV === 'development')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isLocal) return
 
     // Interceptar console.log, console.error, console.warn
     const originalLog = console.log
@@ -47,9 +57,10 @@ export default function DevConsole() {
       console.error = originalError
       console.warn = originalWarn
     }
-  }, [])
+  }, [isLocal])
 
-  if (process.env.NODE_ENV !== 'development') return null
+  // Només mostrar en local i desenvolupament
+  if (!isLocal || process.env.NODE_ENV !== 'development') return null
 
   return (
     <>

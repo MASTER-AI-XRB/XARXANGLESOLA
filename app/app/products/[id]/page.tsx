@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 import TranslateButton from '@/components/TranslateButton'
 
 interface Product {
@@ -30,6 +31,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
   const { t } = useI18n()
+  const { theme } = useTheme()
 
   useEffect(() => {
     const getParams = async () => {
@@ -289,7 +291,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       }`}
                     >
                       <Image
-                        src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                        src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                         alt={product.prestec ? t('products.prestec') : ''}
                         width={20}
                         height={20}

@@ -101,6 +101,25 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "disabledProduction": "Chat requires configuration. Set NEXT_PUBLIC_SOCKET_URL to enable it."
+  },
+  "notifications": {
+    "newMessage": "New message",
+    "newPrivateMessage": "New private message",
+    "productReserved": "Product reserved",
+    "productReservedMessage": "{nickname} has reserved your product: {productName}",
+    "productUnreserved": "Product unreserved",
+    "productUnreservedMessage": "{nickname} has unreserved your product: {productName}",
+    "productAddedToFavorites": "Product added to favorites",
+    "productAddedToFavoritesMessage": "{nickname} has added your product to favorites: {productName}",
+    "sessionTerminated": "Session closed",
+    "sessionTerminatedMessage": "A new session has been opened from another device. This session has been closed.",
+    "view": "View",
+    "enableNotifications": "Enable notifications",
+    "notificationsEnabled": "Notifications enabled",
+    "notificationsEnabledMessage": "You will now receive browser notifications.",
+    "notificationsDisabled": "Notifications disabled",
+    "notificationsDisabledMessage": "You have denied notification permissions. You can enable them from your browser settings.",
+    "enabled": "Notifications enabled"
   }
 }
 

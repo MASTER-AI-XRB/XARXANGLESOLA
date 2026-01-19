@@ -101,6 +101,25 @@
     "today": "Avui",
     "yesterday": "Ahir",
     "disabledProduction": "El xat requereix configuració. Configura NEXT_PUBLIC_SOCKET_URL per activar-lo."
+  },
+  "notifications": {
+    "newMessage": "Nou missatge",
+    "newPrivateMessage": "Nou missatge privat",
+    "productReserved": "Producte reservat",
+    "productReservedMessage": "{nickname} ha reservat el teu producte: {productName}",
+    "productUnreserved": "Producte desreservat",
+    "productUnreservedMessage": "{nickname} ha desreservat el teu producte: {productName}",
+    "productAddedToFavorites": "Producte afegit als preferits",
+    "productAddedToFavoritesMessage": "{nickname} ha afegit el teu producte als preferits: {productName}",
+    "sessionTerminated": "Sessió tancada",
+    "sessionTerminatedMessage": "Una nova sessió s'ha obert des d'un altre dispositiu. Aquesta sessió s'ha tancat.",
+    "view": "Veure",
+    "enableNotifications": "Activar notificacions",
+    "notificationsEnabled": "Notificacions activades",
+    "notificationsEnabledMessage": "Ara rebràs notificacions del navegador.",
+    "notificationsDisabled": "Notificacions desactivades",
+    "notificationsDisabledMessage": "Has denegat els permisos de notificació. Pots activar-les des de la configuració del navegador.",
+    "enabled": "Notificacions activades"
   }
 }
 

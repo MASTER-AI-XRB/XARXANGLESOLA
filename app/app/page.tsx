@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { io, Socket } from 'socket.io-client'
 import { useI18n } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
+import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
 
 interface Product {
@@ -27,6 +30,9 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const { theme } = useTheme()
+  const { showInfo } = useNotifications()
+  const [socket, setSocket] = useState<Socket | null>(null)
   const [filters, setFilters] = useState({
     name: '',
     user: '',
@@ -36,6 +42,7 @@ export default function ProductsPage() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const router = useRouter()
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const nickname = typeof window !== 'undefined' ? localStorage.getItem('nickname') : null
   const { t } = useI18n()
 
   const refreshProducts = async () => {
@@ -49,6 +56,45 @@ export default function ProductsPage() {
     }
     fetchProducts()
   }, [router, userId])
+
+  // Connectar a Socket.IO per rebre notificacions
+  useEffect(() => {
+    if (!userId || !nickname) return
+
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+    const newSocket = io(socketUrl, {
+      query: { userId, nickname },
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    })
+
+    newSocket.on('connect', () => {
+      console.log('Connectat a Socket.IO per notificacions')
+    })
+
+    // Escoltar notificacions de l'aplicació
+    newSocket.on('app-notification', (data: { type: string; title: string; message: string; action?: { label: string; url?: string } }) => {
+      showInfo(data.title, data.message, {
+        type: data.type as 'info' | 'success' | 'warning' | 'error',
+        action: data.action ? {
+          label: data.action.label,
+          onClick: () => {
+            if (data.action?.url) {
+              router.push(data.action.url)
+            }
+          }
+        } : undefined,
+      })
+    })
+
+    setSocket(newSocket)
+
+    return () => {
+      newSocket.close()
+    }
+  }, [userId, nickname, showInfo, router])
 
   const fetchProducts = async () => {
     try {
@@ -485,23 +531,25 @@ export default function ProductsPage() {
                 {/* Icones a la cantonada superior dreta */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
                   {product.reserved && (
-                    <div className="bg-yellow-500 text-white rounded-full p-1 shadow-md" title={t('products.reserved')}>
+                    <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md" title={t('products.reserved')}>
                       <svg
-                        className="w-3 h-3"
+                        className="w-5 h-5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
+                        preserveAspectRatio="xMidYMid meet"
                       >
                         <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                       </svg>
                     </div>
                   )}
                   {product.prestec && (
-                    <div className="bg-green-500 text-white rounded-full p-1 shadow-md" title={t('products.prestec')}>
+                    <div className="bg-green-500 text-white rounded-full p-2 shadow-md" title={t('products.prestec')}>
                       <svg
-                        className="w-3 h-3"
+                        className="w-5 h-5"
                         fill="currentColor"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        preserveAspectRatio="xMidYMid meet"
                       >
                           <path
                             strokeLinecap="round"
@@ -521,14 +569,15 @@ export default function ProductsPage() {
                             e.stopPropagation()
                             toggleReserved(product.id, e)
                           }}
-                          className="bg-white dark:bg-gray-800 rounded-full p-1 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                          className="bg-white dark:bg-white rounded-full p-2 shadow-md hover:bg-gray-100 dark:hover:bg-gray-100 transition"
                           title={t('products.reserveTitle')}
                         >
                           <svg
-                            className="w-3 h-3 text-gray-600 dark:text-gray-300"
+                            className="w-5 h-5 text-gray-600 dark:text-gray-300"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
+                            preserveAspectRatio="xMidYMid meet"
                           >
                             <path
                               strokeLinecap="round"
@@ -545,15 +594,19 @@ export default function ProductsPage() {
                           e.stopPropagation()
                           togglePrestec(product.id, e)
                         }}
-                        className="rounded-full p-1 shadow-md transition hover:opacity-80"
+                        className={`rounded-full p-2 shadow-md transition ${
+                          product.prestec
+                            ? 'bg-green-500 hover:bg-green-600'
+                            : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                        }`}
                         title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                       >
                         <Image
                           src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
                           alt={product.prestec ? t('products.prestec') : ''}
-                          width={12}
-                          height={12}
-                          className="w-3 h-3"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 object-contain"
                         />
                       </button>
                     </>
@@ -564,15 +617,15 @@ export default function ProductsPage() {
                         e.stopPropagation()
                         toggleFavorite(product.id, e)
                       }}
-                      className={`rounded-full p-1 shadow-md transition ${
+                      className={`rounded-full p-2 shadow-md transition ${
                         favorites.has(product.id)
                           ? 'bg-red-500 hover:bg-red-600'
-                          : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          : 'bg-white dark:bg-white hover:bg-gray-100 dark:hover:bg-gray-100'
                       }`}
                       title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                     >
                       <svg
-                        className={`w-3 h-3 ${
+                        className={`w-5 h-5 ${
                           favorites.has(product.id)
                             ? 'text-white'
                             : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
@@ -580,6 +633,7 @@ export default function ProductsPage() {
                         fill={favorites.has(product.id) ? 'currentColor' : 'none'}
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        preserveAspectRatio="xMidYMid meet"
                       >
                         <path
                           strokeLinecap="round"
@@ -649,29 +703,23 @@ export default function ProductsPage() {
                             </svg>
                           )}
                         </button>
-                        {/* Icona per préstec (dues mans encaixant) */}
+                        {/* Icona per préstec */}
                         <button
                           onClick={(e) => togglePrestec(product.id, e)}
-                          className={`rounded-full p-2 shadow-md hover:bg-gray-100 transition ${
+                          className={`rounded-full p-2 shadow-md transition ${
                             product.prestec
-                              ? 'bg-green-500 text-white'
-                              : 'bg-white text-gray-600'
+                              ? 'bg-green-500 hover:bg-green-600'
+                              : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
                           }`}
                           title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                         >
-                        <svg
-                          className="w-5 h-5"
-                          fill={product.prestec ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 16.5V19a2 2 0 002 2h6a2 2 0 002-2v-2.5M7 16.5a2.5 2.5 0 01-2-1M7 16.5c0-.552.196-1.06.518-1.46L9.5 13.5M17 16.5a2.5 2.5 0 002-1M17 16.5c0-.552-.196-1.06-.518-1.46L14.5 13.5M7 16.5h10M9 11a3 3 0 106 0m-6 0a3 3 0 116 0m-6 0v-1a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"
+                          <Image
+                            src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                            alt={product.prestec ? t('products.prestec') : ''}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5"
                           />
-                        </svg>
                         </button>
                         {/* Icona per eliminar */}
                         <button

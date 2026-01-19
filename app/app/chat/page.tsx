@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
+import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
 
 interface Message {
@@ -31,6 +33,8 @@ export default function ChatPage() {
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
   const nickname = typeof window !== 'undefined' ? localStorage.getItem('nickname') : null
   const { t, locale } = useI18n()
+  const { showInfo } = useNotifications()
+  const router = useRouter()
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
@@ -218,17 +222,40 @@ export default function ChatPage() {
 
     newSocket.on('session-terminated', (data: { message?: string }) => {
       console.log('Sessió terminada:', data.message)
-      alert(data.message || 'Una nova sessió s\'ha obert des d\'un altre dispositiu. Aquesta sessió s\'ha tancat.')
-      // Redirigir a la pàgina de login
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('nickname')
-        localStorage.removeItem('userId')
-        window.location.href = '/'
-      }
+      showInfo(
+        t('notifications.sessionTerminated') || 'Sessió tancada',
+        data.message || t('notifications.sessionTerminatedMessage') || 'Una nova sessió s\'ha obert des d\'un altre dispositiu.',
+        {
+          duration: 0, // No tancar automàticament
+          action: {
+            label: t('common.close') || 'Tancar',
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('nickname')
+                localStorage.removeItem('userId')
+                window.location.href = '/'
+              }
+            }
+          }
+        }
+      )
     })
 
     newSocket.on('general-message', (message: Message) => {
       setMessages((prev) => [...prev, message])
+      // Notificació només si no estàs a la pàgina de xat o no estàs al xat general
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/chat')) {
+        showInfo(
+          t('notifications.newMessage') || 'Nou missatge',
+          `${message.userNickname}: ${message.content}`,
+          {
+            action: {
+              label: t('notifications.view') || 'Veure',
+              onClick: () => router.push('/app/chat')
+            }
+          }
+        )
+      }
     })
 
     newSocket.on('private-message', (message: Message) => {
@@ -250,12 +277,35 @@ export default function ChatPage() {
         }))
         if (activePrivateChat === otherUserNickname) {
           scrollToBottom()
+        } else {
+          // Notificació si no estàs al xat privat actiu o no estàs a la pàgina de xat
+          if (typeof window !== 'undefined' && 
+              (!window.location.pathname.includes('/chat') || activePrivateChat !== otherUserNickname)) {
+            showInfo(
+              t('notifications.newPrivateMessage') || 'Nou missatge privat',
+              `${message.userNickname}: ${message.content}`,
+              {
+                action: {
+                  label: t('notifications.view') || 'Veure',
+                  onClick: () => router.push(`/app/chat?nickname=${otherUserNickname}`)
+                }
+              }
+            )
+          }
         }
       }
     })
 
     newSocket.on('online-users', (users: string[]) => {
       setOnlineUsers(users)
+    })
+
+    // Escoltar notificacions de l'aplicació
+    newSocket.on('app-notification', (data: { type: string; title: string; message: string; action?: { label: string; onClick: () => void } }) => {
+      showInfo(data.title, data.message, {
+        type: data.type as 'info' | 'success' | 'warning' | 'error',
+        action: data.action,
+      })
     })
 
     newSocket.on('load-messages', (loadedMessages: Message[]) => {

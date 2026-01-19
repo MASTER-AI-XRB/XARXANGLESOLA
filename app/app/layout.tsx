@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
+import NotificationSettings from '@/components/NotificationSettings'
 import DevConsole from '@/components/DevConsole'
 
 export default function AppLayout({
@@ -93,6 +94,7 @@ export default function AppLayout({
               <div className="hidden sm:flex items-center gap-2">
                 <ThemeToggle />
                 <LanguageSelector />
+                <NotificationSettings />
               </div>
               <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{t('nav.hello', { nickname })}</span>
               <button

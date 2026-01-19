@@ -330,13 +330,77 @@ io.on('connection', (socket) => {
   }
 })
 
-// Log de connexions fallides
-io.engine.on('connection_error', (err) => {
-  console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
-  console.error('Error:', err.message)
-  console.error('Context:', err.context)
-  console.error('===================================')
-})
+  // Event per notificar quan algú afegeix un producte als preferits
+  // Aquest event s'emet des de les API routes via HTTP request al servidor Socket.IO
+  io.on('notification', (data) => {
+    const { targetUserId, type, title, message, action } = data
+    const targetSocketId = userSockets.get(targetUserId)
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('app-notification', {
+        type,
+        title,
+        message,
+        action,
+      })
+    }
+  })
+
+  // Log de connexions fallides
+  io.engine.on('connection_error', (err) => {
+    console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
+    console.error('Error:', err.message)
+    console.error('Context:', err.context)
+    console.error('===================================')
+  })
+
+  // Endpoint HTTP per enviar notificacions des de les API routes
+  httpServer.on('request', (req, res) => {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200)
+      res.end()
+      return
+    }
+
+    if (req.method === 'POST' && req.url === '/notify') {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk.toString()
+      })
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body)
+          const { targetUserId, type, title, message, action } = data
+          const targetSocketId = userSockets.get(targetUserId)
+          if (targetSocketId) {
+            io.to(targetSocketId).emit('app-notification', {
+              type,
+              title,
+              message,
+              action,
+            })
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true }))
+          } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, error: 'User not connected' }))
+          }
+        } catch (error) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }))
+        }
+      })
+      return
+    }
+
+    // Per a altres peticions, retornar 404
+    res.writeHead(404)
+    res.end('Not found')
+  })
 
 httpServer.listen(port, () => {
   console.log(`🚀 Socket.IO servidor corrent al port ${port}`)

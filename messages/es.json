@@ -101,6 +101,25 @@
     "today": "Hoy",
     "yesterday": "Ayer",
     "disabledProduction": "El chat requiere configuración. Configura NEXT_PUBLIC_SOCKET_URL para activarlo."
+  },
+  "notifications": {
+    "newMessage": "Nuevo mensaje",
+    "newPrivateMessage": "Nuevo mensaje privado",
+    "productReserved": "Producto reservado",
+    "productReservedMessage": "{nickname} ha reservado tu producto: {productName}",
+    "productUnreserved": "Producto desreservado",
+    "productUnreservedMessage": "{nickname} ha desreservado tu producto: {productName}",
+    "productAddedToFavorites": "Producto añadido a favoritos",
+    "productAddedToFavoritesMessage": "{nickname} ha añadido tu producto a favoritos: {productName}",
+    "sessionTerminated": "Sesión cerrada",
+    "sessionTerminatedMessage": "Se ha abierto una nueva sesión desde otro dispositivo. Esta sesión se ha cerrado.",
+    "view": "Ver",
+    "enableNotifications": "Activar notificaciones",
+    "notificationsEnabled": "Notificaciones activadas",
+    "notificationsEnabledMessage": "Ahora recibirás notificaciones del navegador.",
+    "notificationsDisabled": "Notificaciones desactivadas",
+    "notificationsDisabledMessage": "Has denegado los permisos de notificación. Puedes activarlas desde la configuración del navegador.",
+    "enabled": "Notificaciones activadas"
   }
 }
 

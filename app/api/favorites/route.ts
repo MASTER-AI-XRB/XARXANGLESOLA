@@ -103,6 +103,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Creant nou preferit...')
+    
+    // Obtenir informació del producte i del propietari
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            nickname: true,
+          },
+        },
+      },
+    })
+
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Producte no trobat' },
+        { status: 404 }
+      )
+    }
+
     const favorite = await prisma.favorite.create({
       data: {
         userId,
@@ -114,6 +135,36 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('Preferit creat exitosament:', favorite.id)
+
+    // Enviar notificació al propietari del producte si no és el mateix usuari
+    if (product.userId !== userId) {
+      try {
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { nickname: true },
+        })
+
+        await fetch(`${socketUrl}/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUserId: product.userId,
+            type: 'info',
+            title: 'Producte afegit als preferits',
+            message: `${user?.nickname || 'Algú'} ha afegit el teu producte als preferits: ${product.name}`,
+            action: {
+              label: 'Veure producte',
+              url: `/app/products/${productId}`,
+            },
+          }),
+        })
+      } catch (error) {
+        console.error('Error enviant notificació:', error)
+        // No fallar la petició si la notificació falla
+      }
+    }
+
     return NextResponse.json({ 
       ...favorite,
       message: 'Afegit als preferits',
