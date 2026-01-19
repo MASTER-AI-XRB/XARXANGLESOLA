@@ -19,7 +19,7 @@ export default function NotificationSettings() {
       // Detectar si és una PWA/webapp
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                           (window.navigator as any).standalone === true ||
-                          document.referrer.includes('android-app://')
+                          (typeof document !== 'undefined' && document.referrer.includes('android-app://'))
       setIsPWA(isStandalone)
     }
   }, [])
@@ -43,7 +43,7 @@ export default function NotificationSettings() {
     // Comprovar cada segon si el permís ha canviat
     const interval = setInterval(checkPermission, 1000)
     return () => clearInterval(interval)
-  }, [showDisableModal])
+  }, [showDisableModal, showEnableModal])
 
   const handleToggleNotifications = async () => {
     if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) {

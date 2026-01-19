@@ -55,6 +55,7 @@ export default function ProductsPage() {
       return
     }
     fetchProducts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, userId])
 
   // Connectar a Socket.IO per rebre notificacions
