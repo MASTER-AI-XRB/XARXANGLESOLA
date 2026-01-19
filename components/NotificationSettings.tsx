@@ -134,33 +134,33 @@ export default function NotificationSettings() {
               Desactivar notificacions
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Per desactivar les notificacions, has d'anar a la configuració del teu navegador:
+              Per desactivar les notificacions, has d&apos;anar a la configuració del teu navegador:
             </p>
             <div className="space-y-3 mb-6 text-sm text-gray-600 dark:text-gray-400">
               {isPWA ? (
                 <>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Android (Chrome):</strong>
-                    <p className="mt-1">Configuració de l'Android → Aplicacions → Xarxa Anglesola → Notificacions → Desactivar</p>
+                    <p className="mt-1">Configuració de l&apos;Android → Aplicacions → Xarxa Anglesola → Notificacions → Desactivar</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">iOS (Safari):</strong>
-                    <p className="mt-1">Configuració de l'iPhone → Safari → Pàgines web → Notificacions → Xarxa Anglesola → Desactivar</p>
+                    <p className="mt-1">Configuració de l&apos;iPhone → Safari → Pàgines web → Notificacions → Xarxa Anglesola → Desactivar</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Desktop (Chrome/Edge):</strong>
-                    <p className="mt-1">Clica amb el botó dret a la icona de l'aplicació a la barra de tasques → Configuració → Notificacions → Desactivar</p>
+                    <p className="mt-1">Clica amb el botó dret a la icona de l&apos;aplicació a la barra de tasques → Configuració → Notificacions → Desactivar</p>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Chrome/Edge:</strong>
-                    <p className="mt-1">Clica a l'icona del cadenat (🔒) a l'esquerra de la barra d'adreces → Notificacions → Bloquejar</p>
+                    <p className="mt-1">Clica a l&apos;icona del cadenat (🔒) a l&apos;esquerra de la barra d&apos;adreces → Notificacions → Bloquejar</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Firefox:</strong>
-                    <p className="mt-1">Clica a l'icona del cadenat (🔒) → Més informació → Permisos → Notificacions → Bloquejar</p>
+                    <p className="mt-1">Clica a l&apos;icona del cadenat (🔒) → Més informació → Permisos → Notificacions → Bloquejar</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Safari:</strong>
@@ -195,33 +195,33 @@ export default function NotificationSettings() {
               Activar notificacions
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Per activar les notificacions, has d'anar a la configuració del teu navegador:
+              Per activar les notificacions, has d&apos;anar a la configuració del teu navegador:
             </p>
             <div className="space-y-3 mb-6 text-sm text-gray-600 dark:text-gray-400">
               {isPWA ? (
                 <>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Android (Chrome):</strong>
-                    <p className="mt-1">Configuració de l'Android → Aplicacions → Xarxa Anglesola → Notificacions → Activar</p>
+                    <p className="mt-1">Configuració de l&apos;Android → Aplicacions → Xarxa Anglesola → Notificacions → Activar</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">iOS (Safari):</strong>
-                    <p className="mt-1">Configuració de l'iPhone → Safari → Pàgines web → Notificacions → Xarxa Anglesola → Permetre</p>
+                    <p className="mt-1">Configuració de l&apos;iPhone → Safari → Pàgines web → Notificacions → Xarxa Anglesola → Permetre</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Desktop (Chrome/Edge):</strong>
-                    <p className="mt-1">Clica amb el botó dret a la icona de l'aplicació a la barra de tasques → Configuració → Notificacions → Activar</p>
+                    <p className="mt-1">Clica amb el botó dret a la icona de l&apos;aplicació a la barra de tasques → Configuració → Notificacions → Activar</p>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Chrome/Edge:</strong>
-                    <p className="mt-1">Clica a l'icona del cadenat (🔒) a l'esquerra de la barra d'adreces → Notificacions → Permetre</p>
+                    <p className="mt-1">Clica a l&apos;icona del cadenat (🔒) a l&apos;esquerra de la barra d&apos;adreces → Notificacions → Permetre</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Firefox:</strong>
-                    <p className="mt-1">Clica a l'icona del cadenat (🔒) → Més informació → Permisos → Notificacions → Permetre</p>
+                    <p className="mt-1">Clica a l&apos;icona del cadenat (🔒) → Més informació → Permisos → Notificacions → Permetre</p>
                   </div>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Safari:</strong>
