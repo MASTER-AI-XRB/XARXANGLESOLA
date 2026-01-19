@@ -96,7 +96,16 @@ export default function ChatPage() {
       return
     }
     
-    if (!socketUrl && typeof window !== 'undefined') {
+    // Assegurar que la URL sempre tingui protocol
+    if (socketUrl) {
+      // Si la URL no comença amb http:// o https://, afegir https:// per defecte
+      if (!socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
+        // Si estem a producció, usar HTTPS; altrament HTTP
+        const protocol = isProduction ? 'https://' : 'http://'
+        socketUrl = `${protocol}${socketUrl}`
+        console.log('  → Afegit protocol a la URL:', socketUrl)
+      }
+    } else if (typeof window !== 'undefined') {
       const hostname = window.location.hostname
       const protocol = window.location.protocol
       
@@ -173,6 +182,10 @@ export default function ChatPage() {
       upgrade: true,
       rememberUpgrade: true,
       autoConnect: true,
+      // Afegir headers per CORS si cal
+      extraHeaders: typeof window !== 'undefined' ? {
+        'Origin': window.location.origin
+      } : {},
     })
 
     newSocket.on('connect', () => {
@@ -191,6 +204,13 @@ export default function ChatPage() {
         context: error.context
       })
       console.error('URL intentada:', socketUrl)
+      console.error('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
+      console.error('Causa probable:', 
+        error.message?.includes('CORS') ? 'CORS - Verifica NEXT_PUBLIC_ALLOWED_ORIGINS a Railway' :
+        error.message?.includes('timeout') ? 'Timeout - Verifica que el servidor estigui actiu' :
+        error.message?.includes('ECONNREFUSED') ? 'Connexió refusada - Verifica la URL del servidor' :
+        'Error desconegut - Revisa els logs del servidor'
+      )
       setConnected(false)
     })
 
@@ -212,6 +232,11 @@ export default function ChatPage() {
 
     newSocket.on('reconnect_failed', () => {
       console.error('❌ Fallida la reconnexió després de tots els intents')
+      console.error('Verifica:')
+      console.error('  1. NEXT_PUBLIC_SOCKET_URL està ben configurada a Vercel?')
+      console.error('  2. NEXT_PUBLIC_ALLOWED_ORIGINS inclou la URL de Vercel a Railway?')
+      console.error('  3. El servidor Socket.IO a Railway està actiu?')
+      console.error('  4. La URL usa HTTPS si Railway ho requereix?')
       setConnected(false)
     })
 
@@ -602,8 +627,13 @@ export default function ChatPage() {
                   {t('chat.send')}
                 </button>
               </div>
-              {!connected && (
-                <p className="text-sm text-red-500 dark:text-red-400 mt-2">{t('chat.connecting')}</p>
+              {!connected && socketUrl && (
+                <div className="mt-2">
+                  <p className="text-sm text-red-500 dark:text-red-400">{t('chat.connecting')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Verifica la consola del navegador per veure errors de connexió
+                  </p>
+                </div>
               )}
             </form>
           </div>

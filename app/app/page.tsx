@@ -62,7 +62,16 @@ export default function ProductsPage() {
   useEffect(() => {
     if (!userId || !nickname) return
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+    
+    // Assegurar que la URL sempre tingui protocol
+    if (socketUrl && !socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
+      const isProduction = typeof window !== 'undefined' && 
+                           (window.location.hostname.includes('vercel.app') || 
+                            window.location.hostname.includes('vercel.com'))
+      const protocol = isProduction ? 'https://' : 'http://'
+      socketUrl = `${protocol}${socketUrl}`
+    }
     const newSocket = io(socketUrl, {
       query: { userId, nickname },
       transports: ['polling', 'websocket'],
