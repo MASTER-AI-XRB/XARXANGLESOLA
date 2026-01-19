@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import TranslateButton from '@/components/TranslateButton'
 
@@ -238,26 +239,16 @@ export default function MyProductsPage() {
                       e.stopPropagation()
                       togglePrestec(product.id, e)
                     }}
-                    className={`rounded-full p-1 shadow-md transition ${
-                      product.prestec
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className="rounded-full p-1 shadow-md transition hover:opacity-80"
                     title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                   >
-                      <svg
-                        className={`w-3 h-3 ${product.prestec ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
-                        fill={product.prestec ? "currentColor" : "none"}
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16.5V19a2 2 0 002 2h6a2 2 0 002-2v-2.5M7 16.5a2.5 2.5 0 01-2-1M7 16.5c0-.552.196-1.06.518-1.46L9.5 13.5M17 16.5a2.5 2.5 0 002-1M17 16.5c0-.552-.196-1.06-.518-1.46L14.5 13.5M7 16.5h10M9 11a3 3 0 106 0m-6 0a3 3 0 116 0m-6 0v-1a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"
-                        />
-                      </svg>
+                    <Image
+                      src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                      alt={product.prestec ? t('products.prestec') : ''}
+                      width={12}
+                      height={12}
+                      className="w-3 h-3"
+                    />
                   </button>
                 </div>
                 </Link>
@@ -327,26 +318,16 @@ export default function MyProductsPage() {
                         e.stopPropagation()
                         togglePrestec(product.id, e)
                       }}
-                      className={`rounded-full p-2 shadow-md transition ${
-                        product.prestec
-                          ? 'bg-green-500 text-white hover:bg-green-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
+                      className="rounded-full p-2 shadow-md transition hover:opacity-80"
                       title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                     >
-                      <svg
+                      <Image
+                        src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                        alt={product.prestec ? t('products.prestec') : ''}
+                        width={20}
+                        height={20}
                         className="w-5 h-5"
-                        fill={product.prestec ? "currentColor" : "none"}
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16.5V19a2 2 0 002 2h6a2 2 0 002-2v-2.5M7 16.5a2.5 2.5 0 01-2-1M7 16.5c0-.552.196-1.06.518-1.46L9.5 13.5M17 16.5a2.5 2.5 0 002-1M17 16.5c0-.552-.196-1.06-.518-1.46L14.5 13.5M7 16.5h10M9 11a3 3 0 106 0m-6 0a3 3 0 116 0m-6 0v-1a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"
-                        />
-                      </svg>
+                      />
                     </button>
                   </div>
                 </div>
