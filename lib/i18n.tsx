@@ -430,6 +430,21 @@ const translations: Record<Locale, Record<string, string>> = {
   },
 }
 
+const formatTranslation = (
+  locale: Locale,
+  key: string,
+  params?: Record<string, string | number>
+): string => {
+  const translation = translations[locale][key] || key
+  if (!params) {
+    return translation
+  }
+  return Object.entries(params).reduce(
+    (str, [paramKey, paramValue]) => str.replace(`{${paramKey}}`, String(paramValue)),
+    translation
+  )
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('ca')
 
@@ -445,16 +460,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('locale', newLocale)
   }
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    const translation = translations[locale][key] || key
-    if (params) {
-      return Object.entries(params).reduce(
-        (str, [paramKey, paramValue]) => str.replace(`{${paramKey}}`, String(paramValue)),
-        translation
-      )
-    }
-    return translation
-  }
+  const t = (key: string, params?: Record<string, string | number>): string =>
+    formatTranslation(locale, key, params)
 
   const translateText = async (text: string, targetLocale?: Locale): Promise<string> => {
     const target = targetLocale || locale
@@ -503,7 +510,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 export function useI18n() {
   const context = useContext(I18nContext)
   if (!context) {
-    throw new Error('useI18n must be used within I18nProvider')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('useI18n must be used within I18nProvider')
+    }
+    return {
+      locale: 'ca' as Locale,
+      setLocale: () => {},
+      t: (key: string, params?: Record<string, string | number>) =>
+        formatTranslation('ca', key, params),
+      translateText: async (text: string) => text,
+    }
   }
   return context
 }
