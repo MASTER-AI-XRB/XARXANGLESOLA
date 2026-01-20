@@ -86,20 +86,10 @@ app.prepare().then(() => {
   const allowedOrigins = generateAllowedOrigins()
   console.log('🔍 Orígens permesos per CORS:', allowedOrigins)
 
-  // Servidor HTTP compartit per Next.js i Socket.io
-  const server = createServer(async (req, res) => {
-    // Altres peticions van a Next.js (Socket.io gestionarà les seves pròpies peticions automàticament)
-    try {
-      const parsedUrl = parse(req.url, true)
-      await handle(req, res, parsedUrl)
-    } catch (err) {
-      console.error('Error occurred handling', req.url, err)
-      res.statusCode = 500
-      res.end('internal server error')
-    }
-  })
+  // Crear servidor HTTP buit (Socket.io l'omplirà amb els seus handlers)
+  const server = createServer()
   
-  // Inicialitzar Socket.io amb el mateix servidor HTTP
+  // Inicialitzar Socket.io PRIMER amb el servidor HTTP
   // Socket.io automàticament interceptarà les peticions a /socket.io/
   const io = new Server(server, {
     path: '/socket.io/',
@@ -151,7 +141,31 @@ app.prepare().then(() => {
     connectTimeout: 45000,
   })
   
-  // Log de totes les peticions HTTP al servidor Socket.io
+  // Afegir handler per Next.js DESPRÉS de Socket.io
+  // Socket.io gestionarà les peticions a /socket.io/ abans que aquest handler s'executi
+  server.on('request', async (req, res) => {
+    // Si és una petició de Socket.io, ja hauria d'haver estat gestionada per Socket.io
+    // Però per seguretat, comprovem i deixem que Socket.io la gestioni
+    if (req.url && req.url.startsWith('/socket.io/')) {
+      console.log(`[Socket HTTP ${req.method}] ${req.url} - Origin: ${req.headers.origin || 'sense origin'}`)
+      // Socket.io hauria d'haver gestionat això, però si arriba aquí, deixem que el servidor HTTP gestioni
+      return
+    }
+    
+    // Altres peticions van a Next.js
+    try {
+      const parsedUrl = parse(req.url, true)
+      await handle(req, res, parsedUrl)
+    } catch (err) {
+      console.error('Error occurred handling', req.url, err)
+      if (!res.headersSent) {
+        res.statusCode = 500
+        res.end('internal server error')
+      }
+    }
+  })
+  
+  // Log de totes les peticions HTTP
   server.on('request', (req, res) => {
     if (req.url && req.url.startsWith('/socket.io/')) {
       console.log(`[Socket HTTP ${req.method}] ${req.url} - Origin: ${req.headers.origin || 'sense origin'}`)
@@ -496,6 +510,11 @@ app.prepare().then(() => {
       }
       console.log(`> Socket.io disponible a http://localhost:${port}/socket.io/`)
       console.log(`> Socket.io CORS configurat per:`, allowedOrigins)
+      console.log(`> Socket.io path: /socket.io/`)
+      console.log(`> Socket.io transports: polling, websocket`)
+      console.log(`> NODE_ENV: ${process.env.NODE_ENV || 'no definit'}`)
+      console.log(`> PORT: ${port}`)
+      console.log(`> SOCKET_PORT: ${socketPort}`)
     })
   }
   
