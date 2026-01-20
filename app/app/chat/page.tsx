@@ -85,20 +85,23 @@ export default function ChatPage() {
     // Detectar la URL del socket de manera robusta
     let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
     
-    // Si no hi ha URL configurada i estem a producció (Vercel), desactivar Socket.io
+    // Detectar si estem a producció
     const isProduction = typeof window !== 'undefined' && 
                          (window.location.hostname.includes('vercel.app') || 
-                          window.location.hostname.includes('vercel.com'))
+                          window.location.hostname.includes('vercel.com') ||
+                          window.location.hostname.includes('railway.app'))
     
+    // Si no hi ha URL configurada i estem a producció, desactivar Socket.io
     if (isProduction && !socketUrl) {
-      console.warn('Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
+      console.warn('⚠️ Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
+      console.warn('   Configura a Vercel: NEXT_PUBLIC_SOCKET_URL=https://xarxanglesola-production.up.railway.app')
       setConnected(false)
       return
     }
     
     // Assegurar que la URL sempre tingui protocol
     if (socketUrl) {
-      // Si la URL no comença amb http:// o https://, afegir https:// per defecte
+      // Si la URL no comença amb http:// o https://, afegir https:// per defecte a producció
       if (!socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
         // Si estem a producció, usar HTTPS; altrament HTTP
         const protocol = isProduction ? 'https://' : 'http://'
@@ -106,10 +109,11 @@ export default function ChatPage() {
         console.log('  → Afegit protocol a la URL:', socketUrl)
       }
     } else if (typeof window !== 'undefined') {
+      // Només detectar automàticament en desenvolupament
       const hostname = window.location.hostname
       const protocol = window.location.protocol
       
-      console.log('🔍 Detectant URL del socket...')
+      console.log('🔍 Detectant URL del socket (desenvolupament)...')
       console.log('  Hostname:', hostname)
       console.log('  Protocol:', protocol)
       
@@ -117,21 +121,28 @@ export default function ChatPage() {
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         socketUrl = 'http://localhost:3001'
         console.log('  → Usant localhost:3001')
+      } else if (hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+        // Per IPs locals, usar HTTP amb port 3001
+        socketUrl = `http://${hostname}:3001`
+        console.log('  → Usant IP local:', socketUrl)
       } else {
-        // Per IPs locals o altres hostnames, usar el mateix hostname amb port 3001
-        // Sempre usar HTTP per al socket (no HTTPS en desenvolupament)
-        const socketProtocol = hostname.includes('localhost') || hostname.match(/^\d+\.\d+\.\d+\.\d+$/) 
-          ? 'http' 
-          : protocol.replace(':', '')
-        socketUrl = `${socketProtocol}://${hostname}:3001`
-        console.log('  → Usant:', socketUrl)
+        // Per altres hostnames en desenvolupament, usar el mateix hostname amb port 3001
+        socketUrl = `http://${hostname}:3001`
+        console.log('  → Usant hostname local:', socketUrl)
       }
     }
     
-    // Fallback final
-    if (!socketUrl) {
+    // Fallback final (només en desenvolupament)
+    if (!socketUrl && !isProduction) {
       socketUrl = 'http://localhost:3001'
       console.log('  → Fallback: usant localhost:3001')
+    }
+    
+    // Si encara no tenim URL i estem a producció, no continuar
+    if (!socketUrl) {
+      console.error('❌ No s\'ha pogut determinar la URL del socket. Configura NEXT_PUBLIC_SOCKET_URL.')
+      setConnected(false)
+      return
     }
     
     console.log('  → URL final del socket:', socketUrl)
@@ -205,12 +216,47 @@ export default function ChatPage() {
       })
       console.error('URL intentada:', socketUrl)
       console.error('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
-      console.error('Causa probable:', 
-        error.message?.includes('CORS') ? 'CORS - Verifica NEXT_PUBLIC_ALLOWED_ORIGINS a Railway' :
-        error.message?.includes('timeout') ? 'Timeout - Verifica que el servidor estigui actiu' :
-        error.message?.includes('ECONNREFUSED') ? 'Connexió refusada - Verifica la URL del servidor' :
-        'Error desconegut - Revisa els logs del servidor'
-      )
+      
+      // Missatges d'ajuda específics segons l'error
+      let causaProbable = 'Error desconegut - Revisa els logs del servidor'
+      let solucions: string[] = []
+      
+      if (error.description === 404 || error.message?.includes('404')) {
+        causaProbable = '404 Not Found - El servidor Socket.io no està disponible a aquesta URL'
+        solucions = [
+          '1. Verifica que el servidor Socket.io estigui engegat a Railway',
+          '2. Verifica que NEXT_PUBLIC_SOCKET_URL sigui correcta (ha de ser la URL completa sense port)',
+          '3. Verifica que Railway permeti connexions al servidor Socket.io',
+          '4. Comprova els logs del servidor a Railway per veure errors'
+        ]
+      } else if (error.message?.includes('CORS')) {
+        causaProbable = 'CORS - El servidor no permet connexions des d\'aquest origen'
+        solucions = [
+          '1. Configura NEXT_PUBLIC_ALLOWED_ORIGINS a Railway amb: https://xarxanglesola.vercel.app',
+          '2. Verifica que el servidor Socket.io a Railway tingui CORS configurat correctament'
+        ]
+      } else if (error.message?.includes('timeout')) {
+        causaProbable = 'Timeout - El servidor no respon'
+        solucions = [
+          '1. Verifica que el servidor Socket.io estigui actiu a Railway',
+          '2. Verifica la connexió de xarxa',
+          '3. Comprova els logs del servidor a Railway'
+        ]
+      } else if (error.message?.includes('ECONNREFUSED')) {
+        causaProbable = 'Connexió refusada - El servidor no està disponible'
+        solucions = [
+          '1. Verifica que NEXT_PUBLIC_SOCKET_URL sigui correcta',
+          '2. Verifica que el servidor Socket.io estigui engegat a Railway',
+          '3. Verifica que Railway permeti connexions externes'
+        ]
+      }
+      
+      console.error('Causa probable:', causaProbable)
+      if (solucions.length > 0) {
+        console.error('Solucions suggerides:')
+        solucions.forEach(sol => console.error('  ' + sol))
+      }
+      
       setConnected(false)
     })
 

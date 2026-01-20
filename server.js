@@ -7,7 +7,11 @@ const { PrismaClient } = require('@prisma/client')
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = process.env.HOSTNAME || '0.0.0.0' // 0.0.0.0 permet accés des de qualsevol IP de la xarxa
 const port = parseInt(process.env.PORT || '3000', 10)
-const socketPort = parseInt(process.env.SOCKET_PORT || '3001', 10)
+// A producció (Railway, etc.), usar el mateix port que Next.js si no hi ha SOCKET_PORT configurat
+// A desenvolupament, usar port 3001 per defecte
+const socketPort = process.env.SOCKET_PORT 
+  ? parseInt(process.env.SOCKET_PORT, 10)
+  : (dev ? 3001 : port)
 
 // Funció per obtenir la IP local
 function getLocalIP() {
@@ -81,9 +85,21 @@ app.prepare().then(() => {
         }
       }
     } else {
-      // En producció, només l'URL de l'aplicació
-      const prodUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${hostname}`
-      origins.add(prodUrl)
+      // En producció, afegir l'URL de l'aplicació i altres orígens configurats
+      if (process.env.NEXT_PUBLIC_APP_URL) {
+        origins.add(process.env.NEXT_PUBLIC_APP_URL)
+      }
+      // També afegir variants sense www i amb www
+      if (process.env.NEXT_PUBLIC_APP_URL) {
+        const url = process.env.NEXT_PUBLIC_APP_URL
+        if (url.startsWith('https://')) {
+          const domain = url.replace('https://', '')
+          origins.add(`https://${domain}`)
+          if (!domain.startsWith('www.')) {
+            origins.add(`https://www.${domain}`)
+          }
+        }
+      }
     }
     
     return Array.from(origins)
