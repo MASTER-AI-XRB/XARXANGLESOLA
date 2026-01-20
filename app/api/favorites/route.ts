@@ -139,7 +139,14 @@ export async function POST(request: NextRequest) {
     // Enviar notificació al propietari del producte si no és el mateix usuari
     if (product.userId !== userId) {
       try {
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
+        if (!socketUrl) {
+          return NextResponse.json({
+            ...favorite,
+            message: 'Afegit als preferits',
+            isFavorite: true,
+          })
+        }
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { nickname: true },
@@ -153,6 +160,9 @@ export async function POST(request: NextRequest) {
             type: 'info',
             title: 'Producte afegit als preferits',
             message: `${user?.nickname || 'Algú'} ha afegit el teu producte als preferits: ${product.name}`,
+            notificationType: 'favorite',
+            actorNickname: user?.nickname || '',
+            productName: product.name,
             action: {
               label: 'Veure producte',
               url: `/app/products/${productId}`,

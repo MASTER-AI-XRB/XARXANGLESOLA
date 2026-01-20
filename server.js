@@ -34,6 +34,155 @@ const handle = app.getRequestHandler()
 const prisma = new PrismaClient()
 
 app.prepare().then(() => {
+  const parseJsonBody = (req) =>
+    new Promise((resolve, reject) => {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk.toString()
+      })
+      req.on('end', () => {
+        if (!body) {
+          resolve({})
+          return
+        }
+        try {
+          resolve(JSON.parse(body))
+        } catch (error) {
+          reject(error)
+        }
+      })
+    })
+
+  const parseJsonArray = (value) => {
+    if (!value) return []
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch (error) {
+      return []
+    }
+  }
+
+  const shouldSendNotification = async (targetUserId, payload) => {
+    const preference = await prisma.notificationPreference.findUnique({
+      where: { userId: targetUserId },
+    })
+
+    if (!preference) {
+      return true
+    }
+
+    const enabledTypes = parseJsonArray(preference.enabledTypes)
+    if (payload.notificationType && enabledTypes.length > 0) {
+      const normalizedTypes = enabledTypes.map((type) => String(type).toLowerCase())
+      if (!normalizedTypes.includes(String(payload.notificationType).toLowerCase())) {
+        return false
+      }
+    }
+
+    if (preference.receiveAll) {
+      return true
+    }
+
+    const allowedNicknames = parseJsonArray(preference.allowedNicknames)
+      .map((nickname) => String(nickname).toLowerCase())
+      .filter(Boolean)
+    const allowedKeywords = parseJsonArray(preference.allowedProductKeywords)
+      .map((keyword) => String(keyword).toLowerCase())
+      .filter(Boolean)
+
+    const actorNickname = String(payload.actorNickname || '').toLowerCase()
+    const productName = String(payload.productName || payload.productType || '').toLowerCase()
+
+    const matchesNickname =
+      actorNickname && allowedNicknames.includes(actorNickname)
+    const matchesKeyword =
+      productName &&
+      allowedKeywords.some((keyword) => productName.includes(keyword))
+
+    return matchesNickname || matchesKeyword
+  }
+
+  const handleNotifyRequest = async (req, res, ioInstance) => {
+    if (!ioInstance) {
+      return false
+    }
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200)
+      res.end()
+      return true
+    }
+
+    if (req.method !== 'POST' || req.url !== '/notify') {
+      return false
+    }
+
+    try {
+      const data = await parseJsonBody(req)
+      const {
+        targetUserId,
+        type,
+        title,
+        message,
+        action,
+        notificationType,
+        actorNickname,
+        productName,
+        productType,
+      } = data || {}
+
+      if (!targetUserId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'Missing targetUserId' }))
+        return true
+      }
+
+      const targetSocketId = ioInstance.sockets.sockets.get
+        ? Array.from(ioInstance.sockets.sockets.keys()).find((socketId) => {
+            const socket = ioInstance.sockets.sockets.get(socketId)
+            return socket?.handshake?.query?.userId === targetUserId
+          })
+        : null
+
+      if (!targetSocketId) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'User not connected' }))
+        return true
+      }
+
+      const shouldSend = await shouldSendNotification(targetUserId, {
+        notificationType,
+        actorNickname,
+        productName,
+        productType,
+      })
+
+      if (!shouldSend) {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true, skipped: true }))
+        return true
+      }
+
+      ioInstance.to(targetSocketId).emit('app-notification', {
+        type,
+        title,
+        message,
+        action,
+      })
+
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ success: true }))
+      return true
+    } catch (error) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }))
+      return true
+    }
+  }
   const generateAllowedOrigins = () => {
     const origins = new Set()
     const localIP = getLocalIP()
@@ -314,6 +463,11 @@ app.prepare().then(() => {
     const socketServer = createServer()
     const ioDev = new Server(socketServer, socketOptions)
     setupSocketHandlers(ioDev)
+    socketServer.on('request', (req, res) => {
+      handleNotifyRequest(req, res, ioDev).catch((error) => {
+        console.error('Error gestionant /notify:', error)
+      })
+    })
     socketServer.listen(socketPort, hostname, (err) => {
       if (err) throw err
       const localIPForSocket = getLocalIP()
@@ -321,8 +475,12 @@ app.prepare().then(() => {
       console.log(`> Socket.io accés des del telèfon: http://${localIPForSocket}:${socketPort}`)
     })
   } else {
+    let io
     const server = createServer(async (req, res) => {
       if (req.url && req.url.startsWith('/socket.io/')) {
+        return
+      }
+      if (await handleNotifyRequest(req, res, io)) {
         return
       }
       try {
@@ -335,7 +493,7 @@ app.prepare().then(() => {
       }
     })
 
-    const io = new Server(server, socketOptions)
+    io = new Server(server, socketOptions)
     setupSocketHandlers(io)
     server.listen(port, hostname, (err) => {
       if (err) throw err

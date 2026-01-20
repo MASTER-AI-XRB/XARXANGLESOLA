@@ -154,11 +154,11 @@ export default function FavoritesPage() {
                   </div>
                 </div>
                 {/* Icones a la cantonada superior dreta */}
-                <div className="absolute top-1 right-1 flex flex-col gap-1">
+                <div className="absolute top-2 right-2 flex flex-col gap-2">
                   {product.reserved && (
-                    <div className="bg-yellow-500 text-white rounded-full p-1 shadow-md" title={t('products.reserved')}>
+                    <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md" title={t('products.reserved')}>
                       <svg
-                        className="w-3 h-3"
+                        className="w-5 h-5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -172,11 +172,11 @@ export default function FavoritesPage() {
                       e.stopPropagation()
                       removeFavorite(product.id)
                     }}
-                    className="bg-red-500 hover:bg-red-600 rounded-full p-1 shadow-md transition"
+                    className="bg-red-500 hover:bg-red-600 rounded-full p-2 shadow-md transition"
                     aria-label={t('products.removeFromFavorites')}
                   >
                     <svg
-                      className="w-3 h-3 text-white fill-current"
+                      className="w-5 h-5 text-white fill-current"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >

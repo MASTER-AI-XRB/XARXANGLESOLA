@@ -8,21 +8,51 @@ export default function NotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [showDisableModal, setShowDisableModal] = useState(false)
   const [showEnableModal, setShowEnableModal] = useState(false)
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false)
   const [isPWA, setIsPWA] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [prefsLoading, setPrefsLoading] = useState(false)
+  const [prefsSaving, setPrefsSaving] = useState(false)
+  const [prefsError, setPrefsError] = useState<string | null>(null)
+  const [prefsSaved, setPrefsSaved] = useState(false)
+  const [receiveAll, setReceiveAll] = useState(true)
+  const [allowedNicknamesInput, setAllowedNicknamesInput] = useState('')
+  const [allowedKeywordsInput, setAllowedKeywordsInput] = useState('')
   const { t } = useI18n()
   const { showSuccess, showError } = useNotifications()
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification) {
+    if (typeof window === 'undefined') return
+    if ('Notification' in window && window.Notification) {
       setPermission(window.Notification.permission)
-      
+
       // Detectar si és una PWA/webapp
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                          (window.navigator as any).standalone === true ||
-                          (typeof document !== 'undefined' && document.referrer.includes('android-app://'))
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true ||
+        (typeof document !== 'undefined' && document.referrer.includes('android-app://'))
       setIsPWA(isStandalone)
     }
+    setUserId(localStorage.getItem('userId'))
   }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    setPrefsLoading(true)
+    setPrefsError(null)
+    fetch(`/api/notification-preferences?userId=${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setReceiveAll(data.receiveAll !== false)
+        setAllowedNicknamesInput((data.allowedNicknames || []).join(', '))
+        setAllowedKeywordsInput((data.allowedProductKeywords || []).join(', '))
+      })
+      .catch((error) => {
+        console.error('Error carregant preferències:', error)
+        setPrefsError(t('notifications.preferencesError') || 'Error carregant preferències')
+      })
+      .finally(() => setPrefsLoading(false))
+  }, [userId, t])
 
   // Actualitzar l'estat quan canvia el permís (per si canvia des de fora)
   useEffect(() => {
@@ -91,34 +121,61 @@ export default function NotificationSettings() {
 
   return (
     <>
-      <button
-        onClick={handleToggleNotifications}
-        className={`transition ${
-          permission === 'granted'
-            ? 'text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300'
-            : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
-        }`}
-        title={
-          permission === 'granted'
-            ? t('notifications.disableNotifications') || 'Desactivar notificacions'
-            : t('notifications.enableNotifications') || 'Activar notificacions'
-        }
-      >
-        {permission === 'granted' ? (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
-          </svg>
+      <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
+        <button
+          onClick={handleToggleNotifications}
+          className={`transition ${
+            permission === 'granted'
+              ? 'text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300'
+              : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
+          }`}
+          title={
+            permission === 'granted'
+              ? t('notifications.disableNotifications') || 'Desactivar notificacions'
+              : t('notifications.enableNotifications') || 'Activar notificacions'
+          }
+        >
+          {permission === 'granted' ? (
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+              />
+            </svg>
+          )}
+        </button>
+        {userId && (
+          <button
+            onClick={() => {
+              setShowPreferencesModal(true)
+              setPrefsSaved(false)
+            }}
+            className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
+            title={t('notifications.preferencesTitle') || 'Preferències de notificacions'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11.983 2.75a1 1 0 011.034.75l.348 1.272a7.47 7.47 0 012.013.834l1.187-.686a1 1 0 011.366.366l1 1.732a1 1 0 01-.366 1.366l-1.187.686c.08.315.137.638.17.967l1.33.23a1 1 0 01.823.985v2a1 1 0 01-.823.985l-1.33.23a7.51 7.51 0 01-.17.967l1.187.686a1 1 0 01.366 1.366l-1 1.732a1 1 0 01-1.366.366l-1.187-.686a7.47 7.47 0 01-2.013.834l-.348 1.272a1 1 0 01-1.034.75h-2a1 1 0 01-1.034-.75l-.348-1.272a7.47 7.47 0 01-2.013-.834l-1.187.686a1 1 0 01-1.366-.366l-1-1.732a1 1 0 01.366-1.366l1.187-.686a7.51 7.51 0 01-.17-.967l-1.33-.23A1 1 0 012.5 13.5v-2a1 1 0 01.823-.985l1.33-.23c.033-.329.09-.652.17-.967L3.636 8.632a1 1 0 01-.366-1.366l1-1.732a1 1 0 011.366-.366l1.187.686a7.47 7.47 0 012.013-.834l.348-1.272a1 1 0 011.034-.75h2z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+              />
+            </svg>
+          </button>
         )}
-      </button>
+      </div>
 
       {/* Modal per desactivar notificacions quan estan activades */}
       {showDisableModal && (
@@ -236,6 +293,128 @@ export default function NotificationSettings() {
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
               >
                 Tancar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPreferencesModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPreferencesModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('notifications.preferencesTitle') || 'Preferències de notificacions'}
+            </h3>
+
+            {prefsLoading ? (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {t('notifications.preferencesLoading') || 'Carregant preferències...'}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={receiveAll}
+                    onChange={(e) => setReceiveAll(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  {t('notifications.receiveAll') || 'Rebre totes les notificacions'}
+                </label>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('notifications.allowedUsersLabel') || 'Usuaris permesos'}
+                  </label>
+                  <input
+                    type="text"
+                    value={allowedNicknamesInput}
+                    onChange={(e) => setAllowedNicknamesInput(e.target.value)}
+                    disabled={receiveAll}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60"
+                    placeholder={t('notifications.allowedUsersHint') || 'nick1, nick2'}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('notifications.allowedProductsLabel') || 'Tipus de producte'}
+                  </label>
+                  <input
+                    type="text"
+                    value={allowedKeywordsInput}
+                    onChange={(e) => setAllowedKeywordsInput(e.target.value)}
+                    disabled={receiveAll}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60"
+                    placeholder={t('notifications.allowedProductsHint') || 'bici, taula'}
+                  />
+                </div>
+
+                {prefsError && (
+                  <div className="text-sm text-red-600 dark:text-red-400">{prefsError}</div>
+                )}
+                {prefsSaved && (
+                  <div className="text-sm text-green-600 dark:text-green-400">
+                    {t('notifications.preferencesSaved') || 'Preferències desades'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowPreferencesModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
+              >
+                {t('common.close')}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!userId) return
+                  setPrefsSaving(true)
+                  setPrefsError(null)
+                  setPrefsSaved(false)
+                  try {
+                    const response = await fetch('/api/notification-preferences', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId,
+                        receiveAll,
+                        allowedNicknames: allowedNicknamesInput,
+                        allowedProductKeywords: allowedKeywordsInput,
+                        enabledTypes: [],
+                      }),
+                    })
+                    if (!response.ok) {
+                      throw new Error('Error guardant preferències')
+                    }
+                    setPrefsSaved(true)
+                  } catch (error) {
+                    console.error('Error guardant preferències:', error)
+                    setPrefsError(
+                      t('notifications.preferencesError') || 'No s\'han pogut desar les preferències'
+                    )
+                    showError(
+                      t('common.error') || 'Error',
+                      t('notifications.preferencesError') || 'No s\'han pogut desar les preferències'
+                    )
+                  } finally {
+                    setPrefsSaving(false)
+                  }
+                }}
+                disabled={prefsSaving || prefsLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {prefsSaving
+                  ? t('common.loading')
+                  : t('notifications.savePreferences') || 'Desar preferències'}
               </button>
             </div>
           </div>

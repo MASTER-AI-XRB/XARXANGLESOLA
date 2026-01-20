@@ -16,9 +16,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  products  Product[]
-  messages  Message[]
-  favorites Favorite[]
+  products               Product[]
+  messages               Message[]
+  favorites              Favorite[]
+  notificationPreference NotificationPreference?
 }
 
 model Product {
@@ -64,5 +65,19 @@ model Favorite {
   @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
+}
+
+model NotificationPreference {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiveAll             Boolean  @default(true)
+  allowedNicknames       String?
+  allowedProductKeywords String?
+  enabledTypes           String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId])
 }
 
