@@ -8,4 +8,4 @@ cmds = ["npm install", "npx prisma generate"]
 cmds = []
 
 [start]
-cmd = "node socket-server.js"
+cmd = "node server.js"
