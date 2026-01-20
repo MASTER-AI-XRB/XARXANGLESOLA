@@ -33,32 +33,10 @@ const handle = app.getRequestHandler()
 const prisma = new PrismaClient()
 
 app.prepare().then(() => {
-  // Servidor Next.js
-  const server = createServer(async (req, res) => {
-    try {
-      const parsedUrl = parse(req.url, true)
-      await handle(req, res, parsedUrl)
-    } catch (err) {
-      console.error('Error occurred handling', req.url, err)
-      res.statusCode = 500
-      res.end('internal server error')
-    }
-  })
-
-  server.listen(port, hostname, (err) => {
-    if (err) throw err
-    const localIP = getLocalIP()
-    console.log(`> Ready on http://localhost:${port}`)
-    console.log(`> Accés des del telèfon: http://${localIP}:${port}`)
-  })
-
-  // Servidor Socket.io
-  const localIP = getLocalIP()
-  console.log('🔍 IP local detectada:', localIP)
-  
   // Generar llista dinàmica d'orígens permesos
   const generateAllowedOrigins = () => {
     const origins = new Set()
+    const localIP = getLocalIP()
     
     // Afegir orígens de variables d'entorn
     if (process.env.NEXT_PUBLIC_ALLOWED_ORIGINS) {
@@ -108,10 +86,22 @@ app.prepare().then(() => {
   const allowedOrigins = generateAllowedOrigins()
   console.log('🔍 Orígens permesos per CORS:', allowedOrigins)
 
-  // Crear servidor HTTP per Socket.io
-  const httpServer = createServer()
+  // Servidor HTTP compartit per Next.js i Socket.io
+  const server = createServer(async (req, res) => {
+    // Altres peticions van a Next.js (Socket.io gestionarà les seves pròpies peticions automàticament)
+    try {
+      const parsedUrl = parse(req.url, true)
+      await handle(req, res, parsedUrl)
+    } catch (err) {
+      console.error('Error occurred handling', req.url, err)
+      res.statusCode = 500
+      res.end('internal server error')
+    }
+  })
   
-  const io = new Server(httpServer, {
+  // Inicialitzar Socket.io amb el mateix servidor HTTP
+  // Socket.io automàticament interceptarà les peticions a /socket.io/
+  const io = new Server(server, {
     path: '/socket.io/',
     cors: {
       origin: (origin, callback) => {
@@ -162,36 +152,27 @@ app.prepare().then(() => {
   })
   
   // Log de totes les peticions HTTP al servidor Socket.io
-  httpServer.on('request', (req, res) => {
-    console.log(`[Socket HTTP ${req.method}] ${req.url} - Origin: ${req.headers.origin || 'sense origin'}`)
-  })
-
-  // Escoltar al port de Socket.io
-  httpServer.listen(socketPort, hostname, (err) => {
-    if (err) {
-      console.error('Error engegant servidor Socket.io:', err)
-      throw err
+  server.on('request', (req, res) => {
+    if (req.url && req.url.startsWith('/socket.io/')) {
+      console.log(`[Socket HTTP ${req.method}] ${req.url} - Origin: ${req.headers.origin || 'sense origin'}`)
     }
-    const localIPForSocket = getLocalIP()
-    console.log(`> Socket.io servidor a http://localhost:${socketPort}`)
-    console.log(`> Socket.io accés des del telèfon: http://${localIPForSocket}:${socketPort}`)
-    console.log(`> Socket.io CORS configurat per:`, allowedOrigins)
-    console.log(`> Socket.io permet connexions sense origin: true`)
   })
 
-  // Log de connexions fallides
-  io.engine.on('connection_error', (err) => {
-    console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
-    console.error('Error:', err.message)
-    console.error('Context:', err.context)
-    console.error('===================================')
-  })
+  // Funció per configurar els handlers de Socket.io
+  function setupSocketHandlers(ioInstance) {
+    // Log de connexions fallides
+    ioInstance.engine.on('connection_error', (err) => {
+      console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
+      console.error('Error:', err.message)
+      console.error('Context:', err.context)
+      console.error('===================================')
+    })
 
-  const userSockets = new Map() // userId -> socketId (només una sessió per usuari)
-  const socketUsers = new Map() // socketId -> { userId, nickname }
-  const userInfo = new Map() // userId -> { nickname }
+    const userSockets = new Map() // userId -> socketId (només una sessió per usuari)
+    const socketUsers = new Map() // socketId -> { userId, nickname }
+    const userInfo = new Map() // userId -> { nickname }
 
-  io.on('connection', (socket) => {
+    ioInstance.on('connection', (socket) => {
     const { userId, nickname } = socket.handshake.query
     console.log('=== NOVA CONNEXIÓ SOCKET.IO ===')
     console.log(`Origin: ${socket.handshake.headers.origin || 'sense origin'}`)
@@ -208,7 +189,7 @@ app.prepare().then(() => {
       console.log(`Usuari ${nickname} (${userId}) ja està connectat. Desconnectant sessió anterior...`)
       
       // Desconnectar la sessió anterior
-      const existingSocket = io.sockets.sockets.get(existingSocketId)
+      const existingSocket = ioInstance.sockets.sockets.get(existingSocketId)
       if (existingSocket) {
         existingSocket.emit('session-terminated', { 
           message: 'Una nova sessió s\'ha obert des d\'un altre dispositiu' 
@@ -284,7 +265,7 @@ app.prepare().then(() => {
         },
       })
 
-      io.to('general').emit('general-message', {
+      ioInstance.to('general').emit('general-message', {
         ...message,
         userNickname: message.user.nickname,
       })
@@ -415,7 +396,7 @@ app.prepare().then(() => {
 
       // Enviar al destinatari si està connectat
       if (targetSocketId) {
-        io.to(targetSocketId).emit('private-message', messageData)
+        ioInstance.to(targetSocketId).emit('private-message', messageData)
       }
     })
 
@@ -437,8 +418,350 @@ app.prepare().then(() => {
       const onlineUsers = Array.from(userInfo.values()).map(
         (u) => u.nickname
       )
-      io.emit('online-users', onlineUsers)
+      ioInstance.emit('online-users', onlineUsers)
     }
   })
+
+  // Escoltar al port (compartit per Next.js i Socket.io)
+  // A producció sempre usar el mateix port (Railway només permet un port)
+  // A desenvolupament, si socketPort és diferent, crear servidor separat per Socket.io
+  if (dev && socketPort !== port) {
+    // Desenvolupament amb ports separats: crear servidor separat per Socket.io
+    const httpServer = createServer()
+    const ioDev = new Server(httpServer, {
+      path: '/socket.io/',
+      cors: {
+        origin: (origin, callback) => {
+          if (!origin) {
+            callback(null, true)
+            return
+          }
+          const isAllowed = allowedOrigins.some(allowed => {
+            const normalizedAllowed = allowed.replace(/:80$/, '').replace(/:443$/, '')
+            const normalizedOrigin = origin.replace(/:80$/, '').replace(/:443$/, '')
+            return origin === allowed || normalizedOrigin === normalizedAllowed ||
+                   origin.startsWith(allowed) || normalizedOrigin.startsWith(normalizedAllowed)
+          })
+          if (isAllowed || dev) {
+            callback(null, true)
+          } else {
+            callback(new Error('Not allowed by CORS'))
+          }
+        },
+        methods: ['GET', 'POST', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      },
+      pingTimeout: 60000,
+      pingInterval: 25000,
+      transports: ['polling', 'websocket'],
+      allowEIO3: true,
+      connectTimeout: 45000,
+    })
+    
+    // Configurar handlers per al servidor de desenvolupament
+    setupSocketHandlers(ioDev)
+    
+    httpServer.listen(socketPort, hostname, (err) => {
+      if (err) {
+        console.error('Error engegant servidor Socket.io:', err)
+        throw err
+      }
+      const localIPForSocket = getLocalIP()
+      console.log(`> Socket.io servidor a http://localhost:${socketPort}`)
+      console.log(`> Socket.io accés des del telèfon: http://${localIPForSocket}:${socketPort}`)
+    })
+    
+    // Servidor Next.js al port principal
+    server.listen(port, hostname, (err) => {
+      if (err) throw err
+      const localIP = getLocalIP()
+      console.log(`> Ready on http://localhost:${port}`)
+      console.log(`> Accés des del telèfon: http://${localIP}:${port}`)
+    })
+  } else {
+    // Producció o desenvolupament amb mateix port: integrar Socket.io amb Next.js
+    // Configurar handlers per al servidor integrat
+    setupSocketHandlers(io)
+    
+    server.listen(port, hostname, (err) => {
+      if (err) {
+        console.error('Error engegant servidor:', err)
+        throw err
+      }
+      const localIP = getLocalIP()
+      console.log(`> Ready on http://localhost:${port}`)
+      if (dev) {
+        console.log(`> Accés des del telèfon: http://${localIP}:${port}`)
+      }
+      console.log(`> Socket.io disponible a http://localhost:${port}/socket.io/`)
+      console.log(`> Socket.io CORS configurat per:`, allowedOrigins)
+    })
+  }
+  
+  // Funció per configurar els handlers de Socket.io
+  function setupSocketHandlers(ioInstance) {
+    // Log de connexions fallides
+    ioInstance.engine.on('connection_error', (err) => {
+      console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
+      console.error('Error:', err.message)
+      console.error('Context:', err.context)
+      console.error('===================================')
+    })
+
+    const userSockets = new Map() // userId -> socketId (només una sessió per usuari)
+    const socketUsers = new Map() // socketId -> { userId, nickname }
+    const userInfo = new Map() // userId -> { nickname }
+
+    ioInstance.on('connection', (socket) => {
+      const { userId, nickname } = socket.handshake.query
+      console.log('=== NOVA CONNEXIÓ SOCKET.IO ===')
+      console.log(`Origin: ${socket.handshake.headers.origin || 'sense origin'}`)
+      console.log(`Referer: ${socket.handshake.headers.referer || 'sense referer'}`)
+      console.log(`Socket ID: ${socket.id}`)
+      console.log(`UserId: ${userId}`)
+      console.log(`Nickname: ${nickname}`)
+      console.log(`Remote Address: ${socket.handshake.address}`)
+      console.log('================================')
+      
+      // Comprovar si l'usuari ja està connectat
+      if (userSockets.has(userId)) {
+        const existingSocketId = userSockets.get(userId)
+        console.log(`Usuari ${nickname} (${userId}) ja està connectat. Desconnectant sessió anterior...`)
+        
+        // Desconnectar la sessió anterior
+        const existingSocket = ioInstance.sockets.sockets.get(existingSocketId)
+        if (existingSocket) {
+          existingSocket.emit('session-terminated', { 
+            message: 'Una nova sessió s\'ha obert des d\'un altre dispositiu' 
+          })
+          existingSocket.disconnect(true)
+        }
+        
+        // Netejar les dades de la sessió anterior
+        socketUsers.delete(existingSocketId)
+      }
+
+      console.log(`Usuari connectat: ${nickname} (${userId}) - Socket: ${socket.id}`)
+
+      // Registrar la nova sessió
+      userSockets.set(userId, socket.id)
+      socketUsers.set(socket.id, { userId, nickname })
+      userInfo.set(userId, { nickname })
+
+      // Notificar nous usuaris en línia
+      updateOnlineUsers()
+
+      // Unir-se al xat general
+      socket.on('join-general', async () => {
+        socket.join('general')
+        // Carregar missatges del xat general
+        const messages = await prisma.message.findMany({
+          where: {
+            roomId: 'general',
+            isPrivate: false,
+          },
+          include: {
+            user: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+          take: 50, // Últims 50 missatges
+        })
+        // Transformar missatges per afegir userNickname directament
+        socket.emit('load-messages', messages.map((m) => ({
+          ...m,
+          userNickname: m.user.nickname,
+        })))
+      })
+
+      // Missatge general
+      socket.on('general-message', async (data) => {
+        const user = socketUsers.get(socket.id)
+        if (!user) return
+
+        // Validar contingut del missatge
+        if (!data.content || typeof data.content !== 'string') return
+        const content = data.content.trim()
+        if (content.length === 0 || content.length > 1000) return
+
+        const message = await prisma.message.create({
+          data: {
+            content: content,
+            userId: user.userId,
+            roomId: 'general',
+            isPrivate: false,
+          },
+          include: {
+            user: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+        })
+
+        ioInstance.to('general').emit('general-message', {
+          ...message,
+          userNickname: message.user.nickname,
+        })
+      })
+
+      // Unir-se a xat privat (accepta nickname o userId)
+      socket.on('join-private', async (targetIdentifier) => {
+        const user = socketUsers.get(socket.id)
+        if (!user) return
+
+        let targetUserId = targetIdentifier
+        // Si és un nickname, buscar l'userId
+        if (!targetIdentifier.includes('-')) {
+          const targetUser = await prisma.user.findUnique({
+            where: { nickname: targetIdentifier },
+            select: { id: true },
+          })
+          if (targetUser) {
+            targetUserId = targetUser.id
+          } else {
+            return
+          }
+        }
+
+        const roomId = [user.userId, targetUserId].sort().join('-')
+        socket.join(roomId)
+      })
+
+      // Carregar missatges privats (accepta nickname o userId)
+      socket.on('load-private-messages', async (targetIdentifier) => {
+        const user = socketUsers.get(socket.id)
+        if (!user) return
+
+        let targetUserId = targetIdentifier
+        // Si és un nickname, buscar l'userId
+        if (!targetIdentifier.includes('-')) {
+          const targetUser = await prisma.user.findUnique({
+            where: { nickname: targetIdentifier },
+            select: { id: true },
+          })
+          if (targetUser) {
+            targetUserId = targetUser.id
+          } else {
+            return
+          }
+        }
+
+        const roomId = [user.userId, targetUserId].sort().join('-')
+        const messages = await prisma.message.findMany({
+          where: {
+            OR: [
+              { roomId: roomId, userId: user.userId },
+              { roomId: roomId, userId: targetUserId },
+            ],
+            isPrivate: true,
+          },
+          include: {
+            user: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        })
+
+        socket.emit('load-private-messages', {
+          userId: targetUserId,
+          messages: messages.map((m) => ({
+            ...m,
+            userNickname: m.user.nickname,
+          })),
+        })
+      })
+
+      // Missatge privat (accepta nickname o userId)
+      socket.on('private-message', async (data) => {
+        const user = socketUsers.get(socket.id)
+        if (!user) return
+
+        // Validar contingut del missatge
+        if (!data.content || typeof data.content !== 'string') return
+        const content = data.content.trim()
+        if (content.length === 0 || content.length > 1000) return
+
+        let targetUserId = data.targetUserId || data.targetNickname
+        // Si és un nickname, buscar l'userId
+        if (data.targetNickname && !targetUserId.includes('-')) {
+          const targetUser = await prisma.user.findUnique({
+            where: { nickname: data.targetNickname },
+            select: { id: true },
+          })
+          if (targetUser) {
+            targetUserId = targetUser.id
+          } else {
+            return
+          }
+        }
+
+        const roomId = [user.userId, targetUserId].sort().join('-')
+        const targetSocketId = userSockets.get(targetUserId)
+
+        const message = await prisma.message.create({
+          data: {
+            content: content,
+            userId: user.userId,
+            roomId: roomId,
+            isPrivate: true,
+          },
+          include: {
+            user: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+        })
+
+        const messageData = {
+          ...message,
+          userNickname: message.user.nickname,
+        }
+
+        // Enviar al remitent
+        socket.emit('private-message', messageData)
+
+        // Enviar al destinatari si està connectat
+        if (targetSocketId) {
+          ioInstance.to(targetSocketId).emit('private-message', messageData)
+        }
+      })
+
+      // Desconnexió
+      socket.on('disconnect', () => {
+        console.log(`Usuari desconnectat: ${nickname} (${userId}) - Socket: ${socket.id}`)
+        
+        // Només eliminar si aquest socket és el que està registrat per a l'usuari
+        if (userSockets.get(userId) === socket.id) {
+          userSockets.delete(userId)
+          userInfo.delete(userId)
+        }
+        
+        socketUsers.delete(socket.id)
+        updateOnlineUsers()
+      })
+
+      function updateOnlineUsers() {
+        const onlineUsers = Array.from(userInfo.values()).map(
+          (u) => u.nickname
+        )
+        ioInstance.emit('online-users', onlineUsers)
+      }
+    })
+  }
 })
 
