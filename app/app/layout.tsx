@@ -94,7 +94,6 @@ export default function AppLayout({
               <div className="hidden sm:flex items-center gap-2">
                 <ThemeToggle />
                 <LanguageSelector />
-                <NotificationSettings />
               </div>
               <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{t('nav.hello', { nickname })}</span>
               <button
@@ -150,6 +149,9 @@ export default function AppLayout({
                 >
                   {t('nav.chat')}
                 </Link>
+                <div className="px-3 py-2">
+                  <NotificationSettings />
+                </div>
               </div>
             </div>
           )}

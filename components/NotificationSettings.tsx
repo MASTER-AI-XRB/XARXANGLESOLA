@@ -76,7 +76,11 @@ export default function NotificationSettings() {
   }, [showDisableModal, showEnableModal])
 
   const handleToggleNotifications = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) {
+    if (typeof window === 'undefined') {
+      return
+    }
+    if (!('Notification' in window) || !window.Notification) {
+      setShowEnableModal(true)
       return
     }
 
@@ -94,6 +98,10 @@ export default function NotificationSettings() {
       } else {
         // Si està en 'default', intentar demanar permís
         try {
+          if (!NotificationAPI.requestPermission) {
+            setShowEnableModal(true)
+            return
+          }
           const newPermission = await NotificationAPI.requestPermission()
           setPermission(newPermission)
           
@@ -115,9 +123,8 @@ export default function NotificationSettings() {
     }
   }
 
-  if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) {
-    return null
-  }
+  const isNotificationSupported =
+    typeof window !== 'undefined' && 'Notification' in window && window.Notification
 
   return (
     <>
@@ -128,7 +135,7 @@ export default function NotificationSettings() {
             permission === 'granted'
               ? 'text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300'
               : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
-          }`}
+          } ${!isNotificationSupported ? 'opacity-60' : ''}`}
           title={
             permission === 'granted'
               ? t('notifications.disableNotifications') || 'Desactivar notificacions'
