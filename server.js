@@ -5,7 +5,8 @@ const { Server } = require('socket.io')
 const { PrismaClient } = require('@prisma/client')
 
 const dev = process.env.NODE_ENV !== 'production'
-const hostname = process.env.HOSTNAME || '0.0.0.0' // 0.0.0.0 permet accés des de qualsevol IP de la xarxa
+// En producció, sempre escoltar a 0.0.0.0 per permetre accés públic (Railway, etc.)
+const hostname = dev ? (process.env.HOSTNAME || '0.0.0.0') : '0.0.0.0'
 const port = parseInt(process.env.PORT || '3000', 10)
 // A producció (Railway, etc.), usar el mateix port que Next.js si no hi ha SOCKET_PORT configurat
 // A desenvolupament, usar port 3001 per defecte
