@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
+import { getSocketUrl } from '@/lib/socket'
 
 interface Product {
   id: string
@@ -62,16 +63,8 @@ export default function ProductsPage() {
   useEffect(() => {
     if (!userId || !nickname) return
 
-    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
-    
-    // Assegurar que la URL sempre tingui protocol
-    if (socketUrl && !socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
-      const isProduction = typeof window !== 'undefined' && 
-                           (window.location.hostname.includes('vercel.app') || 
-                            window.location.hostname.includes('vercel.com'))
-      const protocol = isProduction ? 'https://' : 'http://'
-      socketUrl = `${protocol}${socketUrl}`
-    }
+    const socketUrl = getSocketUrl()
+    if (!socketUrl) return
     const newSocket = io(socketUrl, {
       query: { userId, nickname },
       transports: ['polling', 'websocket'],

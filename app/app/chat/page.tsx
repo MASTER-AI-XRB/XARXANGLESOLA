@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
+import { getSocketUrl } from '@/lib/socket'
 
 interface Message {
   id: string
@@ -82,65 +83,12 @@ export default function ChatPage() {
   useEffect(() => {
     if (!userId || !nickname) return
 
-    // Detectar la URL del socket de manera robusta
-    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
-    
-    // Detectar si estem a producció
-    const isProduction = typeof window !== 'undefined' && 
-                         (window.location.hostname.includes('vercel.app') || 
-                          window.location.hostname.includes('vercel.com') ||
-                          window.location.hostname.includes('railway.app'))
-    
+    const socketUrl = getSocketUrl()
+
     // Si no hi ha URL configurada i estem a producció, desactivar Socket.io
-    if (isProduction && !socketUrl) {
+    if (!socketUrl) {
       console.warn('⚠️ Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
       console.warn('   Configura a Vercel: NEXT_PUBLIC_SOCKET_URL=https://xarxanglesola-production.up.railway.app')
-      setConnected(false)
-      return
-    }
-    
-    // Assegurar que la URL sempre tingui protocol
-    if (socketUrl) {
-      // Si la URL no comença amb http:// o https://, afegir https:// per defecte a producció
-      if (!socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
-        // Si estem a producció, usar HTTPS; altrament HTTP
-        const protocol = isProduction ? 'https://' : 'http://'
-        socketUrl = `${protocol}${socketUrl}`
-        console.log('  → Afegit protocol a la URL:', socketUrl)
-      }
-    } else if (typeof window !== 'undefined') {
-      // Només detectar automàticament en desenvolupament
-      const hostname = window.location.hostname
-      const protocol = window.location.protocol
-      
-      console.log('🔍 Detectant URL del socket (desenvolupament)...')
-      console.log('  Hostname:', hostname)
-      console.log('  Protocol:', protocol)
-      
-      // Si estem a localhost o 127.0.0.1, usar localhost:3001
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        socketUrl = 'http://localhost:3001'
-        console.log('  → Usant localhost:3001')
-      } else if (hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
-        // Per IPs locals, usar HTTP amb port 3001
-        socketUrl = `http://${hostname}:3001`
-        console.log('  → Usant IP local:', socketUrl)
-      } else {
-        // Per altres hostnames en desenvolupament, usar el mateix hostname amb port 3001
-        socketUrl = `http://${hostname}:3001`
-        console.log('  → Usant hostname local:', socketUrl)
-      }
-    }
-    
-    // Fallback final (només en desenvolupament)
-    if (!socketUrl && !isProduction) {
-      socketUrl = 'http://localhost:3001'
-      console.log('  → Fallback: usant localhost:3001')
-    }
-    
-    // Si encara no tenim URL i estem a producció, no continuar
-    if (!socketUrl) {
-      console.error('❌ No s\'ha pogut determinar la URL del socket. Configura NEXT_PUBLIC_SOCKET_URL.')
       setConnected(false)
       return
     }
@@ -157,8 +105,8 @@ export default function ChatPage() {
     console.log('URL completa:', typeof window !== 'undefined' ? window.location.href : 'N/A')
     console.log('========================================')
     
-    // Provar la connexió manualment abans de Socket.io
-    if (typeof window !== 'undefined') {
+    // Provar la connexió manualment abans de Socket.io (només en desenvolupament)
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
       const testUrl = `${socketUrl}/socket.io/?EIO=4&transport=polling`
       console.log('🔍 Provant connexió HTTP a:', testUrl)
       
@@ -193,10 +141,6 @@ export default function ChatPage() {
       upgrade: true,
       rememberUpgrade: true,
       autoConnect: true,
-      // Afegir headers per CORS si cal
-      extraHeaders: typeof window !== 'undefined' ? {
-        'Origin': window.location.origin
-      } : {},
     })
 
     newSocket.on('connect', () => {

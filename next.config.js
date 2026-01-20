@@ -19,7 +19,7 @@ const nextConfig = {
   },
   // Exposar variables d'entorn al client
   env: {
-    NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001',
+    NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || '',
   },
   // Seguretat
   async headers() {
