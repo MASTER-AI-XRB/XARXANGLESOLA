@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
 import nodemailer from 'nodemailer'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError, logInfo } from '@/lib/logger'
 
 const prisma = new PrismaClient()
 
@@ -38,19 +40,13 @@ export async function POST(request: NextRequest) {
     const { email } = await request.json()
 
     if (!email) {
-      return NextResponse.json(
-        { error: 'L\'email és obligatori' },
-        { status: 400 }
-      )
+      return apiError('L\'email és obligatori', 400)
     }
 
     // Validar format d'email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email.trim())) {
-      return NextResponse.json(
-        { error: 'Format d\'email invàlid' },
-        { status: 400 }
-      )
+      return apiError('Format d\'email invàlid', 400)
     }
 
     // Buscar usuari per email
@@ -61,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Per seguretat, sempre retornem èxit encara que l'email no existeixi
     // Això evita que algú pugui descobrir quins emails estan registrats
     if (!user) {
-      return NextResponse.json({
+      return apiOk({
         message: 'Si l\'email existeix, s\'ha enviat un enllaç de recuperació',
       })
     }
@@ -126,13 +122,13 @@ export async function POST(request: NextRequest) {
       
       // En desenvolupament, loguejar l'URL per facilitar les proves
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔗 Enllaç de recuperació de contrasenya:', resetUrl)
+        logInfo('🔗 Enllaç de recuperació de contrasenya:', resetUrl)
       }
     } catch (emailError) {
-      console.error('Error enviant email:', emailError)
+      logError('Error enviant email:', emailError)
       // En desenvolupament, no fallar si no hi ha configuració d'email
       if (process.env.NODE_ENV === 'development') {
-        console.log('⚠️  Mode desenvolupament: Email no enviat. URL de recuperació:', resetUrl)
+        logInfo('⚠️  Mode desenvolupament: Email no enviat. URL de recuperació:', resetUrl)
       } else {
         // En producció, si falla l'email, eliminar el token
         await prisma.user.update({
@@ -142,22 +138,16 @@ export async function POST(request: NextRequest) {
             resetTokenExpiry: null,
           },
         })
-        return NextResponse.json(
-          { error: 'Error enviant l\'email de recuperació' },
-          { status: 500 }
-        )
+        return apiError('Error enviant l\'email de recuperació', 500)
       }
     }
 
-    return NextResponse.json({
+    return apiOk({
       message: 'Si l\'email existeix, s\'ha enviat un enllaç de recuperació',
     })
   } catch (error) {
-    console.error('Error en forgot-password:', error)
-    return NextResponse.json(
-      { error: 'Error processant la sol·licitud' },
-      { status: 500 }
-    )
+    logError('Error en forgot-password:', error)
+    return apiError('Error processant la sol·licitud', 500)
   }
 }
 

@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getAuthUserId } from '@/lib/auth'
+import { mapProduct } from '@/lib/product-map'
+import { validateUuid } from '@/lib/validation'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError, logWarn } from '@/lib/logger'
 
 // Funció helper per obtenir instància de Prisma
 function getPrisma() {
@@ -8,7 +13,7 @@ function getPrisma() {
       log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     })
   } catch (error) {
-    console.error('Error creant PrismaClient:', error)
+    logError('Error creant PrismaClient:', error)
     throw error
   }
 }
@@ -17,14 +22,10 @@ function getPrisma() {
 export async function GET(request: NextRequest) {
   const prisma = getPrisma()
   try {
-    const userId = request.headers.get('x-user-id') || 
-                   new URL(request.url).searchParams.get('userId')
+    const userId = getAuthUserId(request)
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Usuari no autenticat' },
-        { status: 401 }
-      )
+      return apiError('Usuari no autenticat', 401)
     }
 
     const favorites = await prisma.favorite.findMany({
@@ -45,18 +46,12 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const products = favorites.map((fav) => ({
-      ...fav.product,
-      images: JSON.parse(fav.product.images),
-    }))
+    const products = favorites.map((fav) => mapProduct(fav.product))
 
-    return NextResponse.json(products)
+    return apiOk(products)
   } catch (error) {
-    console.error('Error carregant preferits:', error)
-    return NextResponse.json(
-      { error: 'Error carregant preferits' },
-      { status: 500 }
-    )
+    logError('Error carregant preferits:', error)
+    return apiError('Error carregant preferits', 500)
   } finally {
     await prisma.$disconnect()
   }
@@ -66,43 +61,33 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const prisma = getPrisma()
   try {
-    const { userId, productId } = await request.json()
+    const { productId } = await request.json()
+    const authUserId = getAuthUserId(request)
 
-    console.log('POST /api/favorites - userId:', userId, 'productId:', productId)
-    console.log('Prisma disponible:', !!prisma)
-
-    if (!prisma) {
-      console.error('Prisma no està inicialitzat')
-      return NextResponse.json(
-        { error: 'Error de servidor: Prisma no inicialitzat' },
-        { status: 500 }
-      )
+    if (!authUserId) {
+      return apiError('Usuari no autenticat', 401)
     }
-
-    if (!userId || !productId) {
-      console.error('Falten dades necessàries')
-      return NextResponse.json(
-        { error: 'Falten dades necessàries' },
-        { status: 400 }
-      )
+    if (!productId) {
+      return apiError('Falten dades necessàries', 400)
+    }
+    const productIdValidation = validateUuid(productId, 'producte')
+    if (!productIdValidation.valid) {
+      return apiError(productIdValidation.error, 400)
     }
 
     // Comprovar si ja existeix
     const existing = await prisma.favorite.findUnique({
       where: {
         userId_productId: {
-          userId,
+          userId: authUserId,
           productId,
         },
       },
     })
 
     if (existing) {
-      console.log('El preferit ja existeix')
-      return NextResponse.json({ message: 'Ja està als preferits', isFavorite: true })
+      return apiOk({ isFavorite: true })
     }
-
-    console.log('Creant nou preferit...')
     
     // Obtenir informació del producte i del propietari
     const product = await prisma.product.findUnique({
@@ -118,15 +103,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Producte no trobat' },
-        { status: 404 }
-      )
+      return apiError('Producte no trobat', 404)
     }
 
     const favorite = await prisma.favorite.create({
       data: {
-        userId,
+        userId: authUserId,
         productId,
       },
       include: {
@@ -134,27 +116,28 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('Preferit creat exitosament:', favorite.id)
-
     // Enviar notificació al propietari del producte si no és el mateix usuari
-    if (product.userId !== userId) {
+    const notificationsEnabled =
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
+    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+    if (product.userId !== authUserId && notificationsEnabled) {
       try {
         const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
-        if (!socketUrl) {
-          return NextResponse.json({
-            ...favorite,
-            message: 'Afegit als preferits',
-            isFavorite: true,
-          })
+        if (!socketUrl || !notifySecret) {
+          return apiOk({ isFavorite: true })
         }
         const user = await prisma.user.findUnique({
-          where: { id: userId },
+          where: { id: authUserId },
           select: { nickname: true },
         })
 
         await fetch(`${socketUrl}/notify`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-notify-token': notifySecret,
+          },
           body: JSON.stringify({
             targetUserId: product.userId,
             type: 'info',
@@ -170,22 +153,21 @@ export async function POST(request: NextRequest) {
           }),
         })
       } catch (error) {
-        console.error('Error enviant notificació:', error)
+        if (process.env.NODE_ENV === 'production') {
+          logError('Error enviant notificació:', error)
+        } else {
+          logWarn('No s\'ha pogut enviar la notificació de preferits.', error)
+        }
         // No fallar la petició si la notificació falla
       }
     }
 
-    return NextResponse.json({ 
-      ...favorite,
-      message: 'Afegit als preferits',
-      isFavorite: true 
-    })
+    return apiOk({ isFavorite: true })
   } catch (error) {
-    console.error('Error afegint preferit:', error)
-    return NextResponse.json(
-      { error: 'Error afegint preferit', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    logError('Error afegint preferit:', error)
+    return apiError('Error afegint preferit', 500, {
+      details: error instanceof Error ? error.message : 'Unknown error',
+    })
   } finally {
     await prisma.$disconnect()
   }
@@ -195,31 +177,33 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const prisma = getPrisma()
   try {
-    const { userId, productId } = await request.json()
+    const { productId } = await request.json()
+    const authUserId = getAuthUserId(request)
 
-    if (!userId || !productId) {
-      return NextResponse.json(
-        { error: 'Falten dades necessàries' },
-        { status: 400 }
-      )
+    if (!authUserId) {
+      return apiError('Usuari no autenticat', 401)
+    }
+    if (!productId) {
+      return apiError('Falten dades necessàries', 400)
+    }
+    const productIdValidation = validateUuid(productId, 'producte')
+    if (!productIdValidation.valid) {
+      return apiError(productIdValidation.error, 400)
     }
 
     await prisma.favorite.delete({
       where: {
         userId_productId: {
-          userId,
+          userId: authUserId,
           productId,
         },
       },
     })
 
-    return NextResponse.json({ message: 'Preferit eliminat' })
+    return apiOk({ isFavorite: false })
   } catch (error) {
-    console.error('Error eliminant preferit:', error)
-    return NextResponse.json(
-      { error: 'Error eliminant preferit' },
-      { status: 500 }
-    )
+    logError('Error eliminant preferit:', error)
+    return apiError('Error eliminant preferit', 500)
   } finally {
     await prisma.$disconnect()
   }

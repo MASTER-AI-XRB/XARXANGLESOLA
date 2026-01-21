@@ -3,8 +3,10 @@ const { parse } = require('url')
 const next = require('next')
 const { Server } = require('socket.io')
 const { PrismaClient } = require('@prisma/client')
+const crypto = require('crypto')
 
 const dev = process.env.NODE_ENV !== 'production'
+const isDev = dev
 // En producció, sempre escoltar a 0.0.0.0 per permetre accés públic (Railway, etc.)
 const hostname = dev ? (process.env.HOSTNAME || '0.0.0.0') : '0.0.0.0'
 const port = parseInt(process.env.PORT || '3000', 10)
@@ -33,7 +35,102 @@ const handle = app.getRequestHandler()
 
 const prisma = new PrismaClient()
 
+const logInfo = (...args) => {
+  if (isDev) {
+    console.log(...args)
+  }
+}
+
+const logWarn = (message, error) => {
+  if (!error) {
+    if (isDev) console.warn(message)
+    return
+  }
+  if (isDev) {
+    console.warn(message, error)
+    return
+  }
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  console.warn(message, errorMessage)
+}
+
+const logError = (message, error) => {
+  if (!error) {
+    console.error(message)
+    return
+  }
+  if (isDev) {
+    console.error(message, error)
+    return
+  }
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  console.error(message, errorMessage)
+}
+
 app.prepare().then(() => {
+  const SESSION_COOKIE = 'xarxa_session'
+  const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+  const getSecret = () => {
+    const secret = process.env.AUTH_SECRET
+    if (secret) return secret
+    if (dev) return 'dev-secret-change-me'
+    return null
+  }
+
+  const base64UrlDecode = (value) => {
+    const padded = value.replace(/-/g, '+').replace(/_/g, '/')
+    const padLength = (4 - (padded.length % 4)) % 4
+    return Buffer.from(padded + '='.repeat(padLength), 'base64').toString('utf8')
+  }
+
+  const sign = (payload, secret) =>
+    crypto.createHmac('sha256', secret).update(payload).digest('base64url')
+
+  const verifySessionToken = (token) => {
+    const secret = getSecret()
+    if (!secret || !token) return null
+    const [encoded, signature] = token.split('.')
+    if (!encoded || !signature) return null
+    const expected = sign(encoded, secret)
+    try {
+      const signatureBuffer = Buffer.from(signature)
+      const expectedBuffer = Buffer.from(expected)
+      if (signatureBuffer.length !== expectedBuffer.length) {
+        return null
+      }
+      if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+        return null
+      }
+    } catch {
+      return null
+    }
+    const payload = JSON.parse(base64UrlDecode(encoded))
+    if (!payload?.userId || !payload.exp) return null
+    if (payload.exp < Math.floor(Date.now() / 1000)) {
+      return null
+    }
+    return payload
+  }
+
+  const parseCookies = (cookieHeader) => {
+    if (!cookieHeader) return {}
+    return cookieHeader.split(';').reduce((acc, pair) => {
+      const [key, ...rest] = pair.trim().split('=')
+      acc[key] = rest.join('=')
+      return acc
+    }, {})
+  }
+
+  const getSocketAuthPayload = (socket) => {
+    const token =
+      socket.handshake.auth?.token ||
+      socket.handshake.query?.token ||
+      parseCookies(socket.handshake.headers.cookie || '')[SESSION_COOKIE]
+    if (token) {
+      return verifySessionToken(token)
+    }
+    return null
+  }
   const parseJsonBody = (req) =>
     new Promise((resolve, reject) => {
       let body = ''
@@ -62,6 +159,25 @@ app.prepare().then(() => {
       return []
     }
   }
+
+  const normalizeString = (value, maxLength) => {
+    if (typeof value !== 'string') return ''
+    return value.trim().slice(0, maxLength)
+  }
+
+  const isUuid = (value) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value || ''
+    )
+
+  const isNickname = (value) => /^[a-zA-Z0-9_-]{3,20}$/.test(value || '')
+
+  const mapMessage = (message) => ({
+    id: message.id,
+    content: message.content,
+    userNickname: message.user?.nickname || message.userNickname,
+    createdAt: message.createdAt,
+  })
 
   const shouldSendNotification = async (targetUserId, payload) => {
     const preference = await prisma.notificationPreference.findUnique({
@@ -107,9 +223,10 @@ app.prepare().then(() => {
     if (!ioInstance) {
       return false
     }
+    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-notify-token')
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200)
@@ -119,6 +236,14 @@ app.prepare().then(() => {
 
     if (req.method !== 'POST' || req.url !== '/notify') {
       return false
+    }
+    if (notifySecret) {
+      const requestToken = req.headers['x-notify-token']
+      if (requestToken !== notifySecret) {
+        res.writeHead(401, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'Unauthorized' }))
+        return true
+      }
     }
 
     try {
@@ -144,7 +269,7 @@ app.prepare().then(() => {
       const targetSocketId = ioInstance.sockets.sockets.get
         ? Array.from(ioInstance.sockets.sockets.keys()).find((socketId) => {
             const socket = ioInstance.sockets.sockets.get(socketId)
-            return socket?.handshake?.query?.userId === targetUserId
+            return socket?.data?.userId === targetUserId
           })
         : null
 
@@ -220,7 +345,7 @@ app.prepare().then(() => {
   }
 
   const allowedOrigins = generateAllowedOrigins()
-  console.log('🔍 Orígens permesos per CORS:', allowedOrigins)
+  logInfo('🔍 Orígens permesos per CORS:', allowedOrigins)
 
   const socketOptions = {
     path: '/socket.io/',
@@ -234,18 +359,13 @@ app.prepare().then(() => {
         const normalizedOrigin = origin.replace(/:80$/, '').replace(/:443$/, '')
         const isAllowed = allowedOrigins.some((allowed) => {
           const normalizedAllowed = allowed.replace(/:80$/, '').replace(/:443$/, '')
-          return (
-            origin === allowed ||
-            normalizedOrigin === normalizedAllowed ||
-            origin.startsWith(allowed) ||
-            normalizedOrigin.startsWith(normalizedAllowed)
-          )
+          return origin === allowed || normalizedOrigin === normalizedAllowed
         })
 
         if (isAllowed || dev) {
           callback(null, true)
         } else {
-          console.error(`❌ CORS bloquejat: ${origin}`)
+          logError(`❌ CORS bloquejat: ${origin}`)
           callback(new Error('Not allowed by CORS'))
         }
       },
@@ -262,10 +382,26 @@ app.prepare().then(() => {
 
   const setupSocketHandlers = (ioInstance) => {
     ioInstance.engine.on('connection_error', (err) => {
-      console.error('=== ERROR DE CONNEXIÓ SOCKET.IO ===')
-      console.error('Error:', err.message)
-      console.error('Context:', err.context)
-      console.error('===================================')
+      logError('=== ERROR DE CONNEXIÓ SOCKET.IO ===', err?.message || err)
+      logInfo('Context:', err.context)
+    })
+
+    ioInstance.use((socket, next) => {
+      const payload = getSocketAuthPayload(socket)
+      if (payload) {
+        socket.data.userId = payload.userId
+        socket.data.nickname = payload.nickname
+        return next()
+      }
+      if (dev) {
+        const { userId, nickname } = socket.handshake.query || {}
+        if (userId && nickname) {
+          socket.data.userId = String(userId)
+          socket.data.nickname = String(nickname)
+          return next()
+        }
+      }
+      return next(new Error('Unauthorized'))
     })
 
     const userSockets = new Map()
@@ -273,15 +409,16 @@ app.prepare().then(() => {
     const userInfo = new Map()
 
     ioInstance.on('connection', (socket) => {
-      const { userId, nickname } = socket.handshake.query
-      console.log('=== NOVA CONNEXIÓ SOCKET.IO ===')
-      console.log(`Origin: ${socket.handshake.headers.origin || 'sense origin'}`)
-      console.log(`Referer: ${socket.handshake.headers.referer || 'sense referer'}`)
-      console.log(`Socket ID: ${socket.id}`)
-      console.log(`UserId: ${userId}`)
-      console.log(`Nickname: ${nickname}`)
-      console.log(`Remote Address: ${socket.handshake.address}`)
-      console.log('================================')
+      const userId = socket.data.userId
+      const nickname = socket.data.nickname
+      logInfo('=== NOVA CONNEXIÓ SOCKET.IO ===')
+      logInfo(`Origin: ${socket.handshake.headers.origin || 'sense origin'}`)
+      logInfo(`Referer: ${socket.handshake.headers.referer || 'sense referer'}`)
+      logInfo(`Socket ID: ${socket.id}`)
+      logInfo(`UserId: ${userId}`)
+      logInfo(`Nickname: ${nickname}`)
+      logInfo(`Remote Address: ${socket.handshake.address}`)
+      logInfo('================================')
 
       if (userSockets.has(userId)) {
         const existingSocketId = userSockets.get(userId)
@@ -308,17 +445,14 @@ app.prepare().then(() => {
           orderBy: { createdAt: 'asc' },
           take: 50,
         })
-        socket.emit(
-          'load-messages',
-          messages.map((m) => ({ ...m, userNickname: m.user.nickname }))
-        )
+        socket.emit('load-messages', messages.map(mapMessage))
       })
 
       socket.on('general-message', async (data) => {
         const user = socketUsers.get(socket.id)
-        if (!user || !data.content || typeof data.content !== 'string') return
-        const content = data.content.trim()
-        if (content.length === 0 || content.length > 1000) return
+        if (!user || !data || typeof data.content !== 'string') return
+        const content = normalizeString(data.content, 1000)
+        if (!content) return
 
         const message = await prisma.message.create({
           data: {
@@ -330,20 +464,22 @@ app.prepare().then(() => {
           include: { user: { select: { nickname: true } } },
         })
 
-        ioInstance.to('general').emit('general-message', {
-          ...message,
-          userNickname: message.user.nickname,
-        })
+        ioInstance.to('general').emit('general-message', mapMessage(message))
       })
 
       socket.on('join-private', async (targetIdentifier) => {
         const user = socketUsers.get(socket.id)
         if (!user) return
 
-        let targetUserId = targetIdentifier
-        if (!targetIdentifier.includes('-')) {
+        if (typeof targetIdentifier !== 'string') return
+        const normalizedTarget = normalizeString(targetIdentifier, 50)
+        if (!normalizedTarget) return
+
+        let targetUserId = normalizedTarget
+        if (!isUuid(normalizedTarget)) {
+          if (!isNickname(normalizedTarget)) return
           const targetUser = await prisma.user.findUnique({
-            where: { nickname: targetIdentifier },
+            where: { nickname: normalizedTarget },
             select: { id: true },
           })
           if (!targetUser) return
@@ -358,10 +494,15 @@ app.prepare().then(() => {
         const user = socketUsers.get(socket.id)
         if (!user) return
 
-        let targetUserId = targetIdentifier
-        if (!targetIdentifier.includes('-')) {
+        if (typeof targetIdentifier !== 'string') return
+        const normalizedTarget = normalizeString(targetIdentifier, 50)
+        if (!normalizedTarget) return
+
+        let targetUserId = normalizedTarget
+        if (!isUuid(normalizedTarget)) {
+          if (!isNickname(normalizedTarget)) return
           const targetUser = await prisma.user.findUnique({
-            where: { nickname: targetIdentifier },
+            where: { nickname: normalizedTarget },
             select: { id: true },
           })
           if (!targetUser) return
@@ -382,24 +523,24 @@ app.prepare().then(() => {
         })
 
         socket.emit('load-private-messages', {
-          userId: targetUserId,
-          messages: messages.map((m) => ({
-            ...m,
-            userNickname: m.user.nickname,
-          })),
+          messages: messages.map(mapMessage),
         })
       })
 
       socket.on('private-message', async (data) => {
         const user = socketUsers.get(socket.id)
-        if (!user || !data.content || typeof data.content !== 'string') return
-        const content = data.content.trim()
-        if (content.length === 0 || content.length > 1000) return
+        if (!user || !data || typeof data.content !== 'string') return
+        const content = normalizeString(data.content, 1000)
+        if (!content) return
 
-        let targetUserId = data.targetUserId || data.targetNickname
-        if (data.targetNickname && !targetUserId.includes('-')) {
+        const targetRaw = normalizeString(data.targetUserId || data.targetNickname || '', 50)
+        if (!targetRaw) return
+
+        let targetUserId = targetRaw
+        if (!isUuid(targetRaw)) {
+          if (!isNickname(targetRaw)) return
           const targetUser = await prisma.user.findUnique({
-            where: { nickname: data.targetNickname },
+            where: { nickname: targetRaw },
             select: { id: true },
           })
           if (!targetUser) return
@@ -414,10 +555,7 @@ app.prepare().then(() => {
           include: { user: { select: { nickname: true } } },
         })
 
-        const messageData = {
-          ...message,
-          userNickname: message.user.nickname,
-        }
+        const messageData = mapMessage(message)
 
         socket.emit('private-message', messageData)
         if (targetSocketId) {
@@ -447,7 +585,7 @@ app.prepare().then(() => {
         const parsedUrl = parse(req.url, true)
         await handle(req, res, parsedUrl)
       } catch (err) {
-        console.error('Error occurred handling', req.url, err)
+        logError(`Error occurred handling ${req.url}`, err)
         res.statusCode = 500
         res.end('internal server error')
       }
@@ -457,7 +595,7 @@ app.prepare().then(() => {
       if (err) throw err
       const localIP = getLocalIP()
       console.log(`> Ready on http://localhost:${port}`)
-      console.log(`> Accés des del telèfon: http://${localIP}:${port}`)
+      logInfo(`> Accés des del telèfon: http://${localIP}:${port}`)
     })
 
     const socketServer = createServer()
@@ -465,14 +603,14 @@ app.prepare().then(() => {
     setupSocketHandlers(ioDev)
     socketServer.on('request', (req, res) => {
       handleNotifyRequest(req, res, ioDev).catch((error) => {
-        console.error('Error gestionant /notify:', error)
+        logError('Error gestionant /notify:', error)
       })
     })
     socketServer.listen(socketPort, hostname, (err) => {
       if (err) throw err
       const localIPForSocket = getLocalIP()
       console.log(`> Socket.io servidor a http://localhost:${socketPort}`)
-      console.log(`> Socket.io accés des del telèfon: http://${localIPForSocket}:${socketPort}`)
+      logInfo(`> Socket.io accés des del telèfon: http://${localIPForSocket}:${socketPort}`)
     })
   } else {
     let io
@@ -487,7 +625,7 @@ app.prepare().then(() => {
         const parsedUrl = parse(req.url, true)
         await handle(req, res, parsedUrl)
       } catch (err) {
-        console.error('Error occurred handling', req.url, err)
+        logError(`Error occurred handling ${req.url}`, err)
         res.statusCode = 500
         res.end('internal server error')
       }
@@ -500,7 +638,7 @@ app.prepare().then(() => {
       const localIP = getLocalIP()
       console.log(`> Ready on http://localhost:${port}`)
       if (dev) {
-        console.log(`> Accés des del telèfon: http://${localIP}:${port}`)
+        logInfo(`> Accés des del telèfon: http://${localIP}:${port}`)
       }
       console.log(`> Socket.io disponible a http://localhost:${port}/socket.io/`)
     })

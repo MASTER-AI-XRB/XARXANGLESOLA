@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 const prisma = new PrismaClient()
 
@@ -9,24 +11,15 @@ export async function POST(request: NextRequest) {
     const { token, password } = await request.json()
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Token de recuperació requerit' },
-        { status: 400 }
-      )
+      return apiError('Token de recuperació requerit', 400)
     }
 
     if (!password) {
-      return NextResponse.json(
-        { error: 'La contrasenya és obligatòria' },
-        { status: 400 }
-      )
+      return apiError('La contrasenya és obligatòria', 400)
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'La contrasenya ha de tenir almenys 6 caràcters' },
-        { status: 400 }
-      )
+      return apiError('La contrasenya ha de tenir almenys 6 caràcters', 400)
     }
 
     // Buscar usuari amb el token vàlid
@@ -40,10 +33,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Token invàlid o expirat' },
-        { status: 400 }
-      )
+      return apiError('Token invàlid o expirat', 400)
     }
 
     // Encriptar nova contrasenya
@@ -59,15 +49,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
+    return apiOk({
       message: 'Contrasenya restablida correctament',
     })
   } catch (error) {
-    console.error('Error en reset-password:', error)
-    return NextResponse.json(
-      { error: 'Error restablint la contrasenya' },
-      { status: 500 }
-    )
+    logError('Error en reset-password:', error)
+    return apiError('Error restablint la contrasenya', 500)
   }
 }
 

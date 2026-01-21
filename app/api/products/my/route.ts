@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUserId } from '@/lib/auth'
+import { mapProduct } from '@/lib/product-map'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 // Forçar que aquesta ruta sigui dinàmica (no es pot pre-renderitzar)
 export const dynamic = 'force-dynamic'
@@ -7,18 +11,14 @@ export const dynamic = 'force-dynamic'
 // Obtenir productes de l'usuari
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id') || 
-                   new URL(request.url).searchParams.get('userId')
+    const authUserId = getAuthUserId(request)
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Usuari no autenticat' },
-        { status: 401 }
-      )
+    if (!authUserId) {
+      return apiError('Usuari no autenticat', 401)
     }
 
     const products = await prisma.product.findMany({
-      where: { userId },
+      where: { userId: authUserId },
       include: {
         user: {
           select: {
@@ -31,18 +31,12 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const productsWithParsedImages = products.map((product) => ({
-      ...product,
-      images: JSON.parse(product.images),
-    }))
+    const productsWithParsedImages = products.map(mapProduct)
 
-    return NextResponse.json(productsWithParsedImages)
+    return apiOk(productsWithParsedImages)
   } catch (error) {
-    console.error('Error carregant productes de l\'usuari:', error)
-    return NextResponse.json(
-      { error: 'Error carregant productes' },
-      { status: 500 }
-    )
+    logError('Error carregant productes de l\'usuari:', error)
+    return apiError('Error carregant productes', 500)
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n'
+import { logError } from '@/lib/client-logger'
 
 interface TranslateButtonProps {
   text: string
@@ -39,7 +40,7 @@ export default function TranslateButton({ text, className = '' }: TranslateButto
       setTranslatedLocale(locale)
       setShowOriginal(false)
     } catch (error) {
-      console.error('Error translating:', error)
+      logError('Error translating:', error)
     } finally {
       setIsTranslating(false)
     }

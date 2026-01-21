@@ -57,17 +57,9 @@ export default function NewProductPage() {
     }
 
     try {
-      const userId = localStorage.getItem('userId')
-      if (!userId) {
-        setError(t('newProduct.userNotAuth'))
-        setLoading(false)
-        return
-      }
-
       const formData = new FormData()
       formData.append('name', name)
       formData.append('description', description)
-      formData.append('userId', userId)
       images.forEach((image) => {
         formData.append('images', image)
       })
@@ -81,6 +73,8 @@ export default function NewProductPage() {
 
       if (response.ok) {
         router.push('/app')
+      } else if (response.status === 401) {
+        setError(t('newProduct.userNotAuth'))
       } else {
         setError(data.error || t('newProduct.createError'))
       }
