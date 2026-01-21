@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       return apiError('Producte no trobat', 404)
     }
 
-    const favorite = await prisma.favorite.create({
+    await prisma.favorite.create({
       data: {
         userId: authUserId,
         productId,

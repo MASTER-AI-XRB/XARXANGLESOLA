@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Validar nickname
     const validation = validateNickname(nickname)
     if (!validation.valid) {
-      return apiError(validation.error, 400)
+      return apiError(validation.error || 'Nickname invàlid', 400)
     }
 
     // Validar contrasenya
