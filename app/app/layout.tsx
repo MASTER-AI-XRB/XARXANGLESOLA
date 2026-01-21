@@ -48,7 +48,7 @@ export default function AppLayout({
               <Link href="/app" className="flex items-center">
                 <div className="rounded-full overflow-hidden p-1">
                   <Image 
-                    src="/logo.png" 
+                    src="/xarxa_logo.jpg" 
                     alt="Xarxa Anglesola" 
                     width={40}
                     height={40}

@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   title: 'Xarxa Anglesola - Intercanvi de Productes',
   description: 'Plataforma per a intercanviar productes',
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: '/xarxa_logo.jpg',
+    apple: '/xarxa_logo.jpg',
   },
   manifest: '/manifest.webmanifest',
 }
