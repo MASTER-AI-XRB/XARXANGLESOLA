@@ -80,7 +80,7 @@ export default function ChatPage() {
     } else {
       window.localStorage.removeItem(activeChatKey)
     }
-  }, [nickname, openPrivateChats, activePrivateChat])
+  }, [nickname, openPrivateChats, activePrivateChat, hasRestoredChats])
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
@@ -422,7 +422,7 @@ export default function ChatPage() {
     return () => {
       newSocket.close()
     }
-  }, [nickname, activePrivateChat])
+  }, [nickname, activePrivateChat, router, showInfo, t])
 
   useEffect(() => {
     scrollToBottom()
@@ -581,7 +581,7 @@ export default function ChatPage() {
               }`}
             >
               {unreadPrivateChats[chatNickname] ? (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 z-10" />
+                <span className="absolute -top-1 -right-[0.125rem] h-3 w-3 rounded-full bg-red-500 z-10 ring-2 ring-white dark:ring-gray-800" />
               ) : null}
               <span>{t('chat.privateWith', { nickname: chatNickname })}</span>
               <span

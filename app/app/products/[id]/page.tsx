@@ -241,7 +241,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </p>
                 </div>
                 {nickname && nickname === product.user.nickname ? (
-                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto justify-items-end sm:justify-items-start ml-auto pr-2">
                     <button
                       onClick={toggleReserved}
                       aria-label={product.reserved ? t('products.unreserved') : t('products.reserve')}
