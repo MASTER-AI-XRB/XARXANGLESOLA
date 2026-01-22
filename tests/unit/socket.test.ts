@@ -14,6 +14,10 @@ describe('getSocketUrl', () => {
 
   it('returns env URL when provided', () => {
     process.env.NEXT_PUBLIC_SOCKET_URL = 'https://example.com'
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'xarxanglesola.vercel.app', protocol: 'https:' },
+      writable: true,
+    })
     expect(getSocketUrl()).toBe('https://example.com')
   })
 

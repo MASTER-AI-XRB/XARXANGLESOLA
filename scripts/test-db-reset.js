@@ -26,13 +26,22 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
+const prismaCommand = process.platform === 'win32'
+  ? path.join(__dirname, '..', 'node_modules', '.bin', 'prisma.cmd')
+  : path.join(__dirname, '..', 'node_modules', '.bin', 'prisma')
+
 const result = spawnSync(
-  'npx',
-  ['prisma', 'db', 'push', '--force-reset', '--accept-data-loss'],
+  prismaCommand,
+  ['db', 'push', '--force-reset', '--accept-data-loss'],
   {
     stdio: 'inherit',
     env: process.env,
+    shell: process.platform === 'win32',
   }
 )
+
+if (result.error) {
+  console.error('Error executant prisma db push:', result.error.message || result.error)
+}
 
 process.exit(result.status ?? 1)

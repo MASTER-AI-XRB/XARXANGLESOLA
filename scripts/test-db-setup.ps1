@@ -14,7 +14,7 @@ Get-Content $EnvFile | ForEach-Object {
     if ($parts.Length -eq 2) {
       $name = $parts[0].Trim()
       $value = $parts[1].Trim().Trim('"')
-      if ($name) { $env:$name = $value }
+      if ($name) { Set-Item -Path "env:$name" -Value $value }
     }
   }
 }

@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 
 const defaultPort = process.env.PLAYWRIGHT_PORT || '3005'
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${defaultPort}`
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${defaultPort}`
 process.env.PLAYWRIGHT_BASE_URL = baseURL
 const baseURLPort = new URL(baseURL).port || (baseURL.startsWith('https') ? '443' : '80')
 const socketPort = process.env.PLAYWRIGHT_SOCKET_PORT || String(Number(baseURLPort) + 1)

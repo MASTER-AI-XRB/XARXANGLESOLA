@@ -78,7 +78,7 @@ test('reserve and prestec toggles', async ({ page, request }) => {
     throw new Error(`Reserva fallida: ${reserveResponse.status()} ${await reserveResponse.text()}`)
   }
   await expect(page.getByText(/Reservat/i)).toBeVisible({ timeout: 10000 })
-  await expect(reserveButton).toHaveText(/Desreservar/i)
+  await expect(reserveButton).toHaveAttribute('aria-label', /Desreservar/i)
 
   const [unreserveResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -89,7 +89,7 @@ test('reserve and prestec toggles', async ({ page, request }) => {
   if (!unreserveResponse.ok()) {
     throw new Error(`Desreservar fallit: ${unreserveResponse.status()} ${await unreserveResponse.text()}`)
   }
-  await expect(reserveButton).toHaveText(/Reservar/i)
+  await expect(reserveButton).toHaveAttribute('aria-label', /Reservar/i)
 
   const prestecButton = page.getByRole('button', { name: /pr[eèé]stec/i })
   await expect(prestecButton).toBeVisible({ timeout: 10000 })
@@ -103,7 +103,7 @@ test('reserve and prestec toggles', async ({ page, request }) => {
   if (!prestecResponse.ok()) {
     throw new Error(`Préstec fallit: ${prestecResponse.status()} ${await prestecResponse.text()}`)
   }
-  await expect(prestecButton).toHaveText(/Desmarcar com a pr[eèé]stec/i)
+  await expect(prestecButton).toHaveClass(/bg-green-500/)
 
   const [unprestecResponse] = await Promise.all([
     page.waitForResponse((response) =>
@@ -114,5 +114,5 @@ test('reserve and prestec toggles', async ({ page, request }) => {
   if (!unprestecResponse.ok()) {
     throw new Error(`Desmarcar préstec fallit: ${unprestecResponse.status()} ${await unprestecResponse.text()}`)
   }
-  await expect(prestecButton).toHaveText(/Marcar com a pr[eèé]stec/i)
+  await expect(prestecButton).not.toHaveClass(/bg-green-500/)
 })
