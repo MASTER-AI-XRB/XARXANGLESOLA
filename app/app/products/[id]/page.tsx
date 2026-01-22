@@ -243,10 +243,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </p>
                 </div>
                 {userId && userId === product.userId ? (
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
                     <button
                       onClick={toggleReserved}
-                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm sm:text-base ${
+                      className={`w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex flex-col items-center justify-center gap-1 text-xs sm:text-sm text-center ${
                         product.reserved
                           ? 'bg-yellow-500 text-white hover:bg-yellow-600'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -284,7 +284,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     </button>
                     <button
                       onClick={togglePrestec}
-                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm sm:text-base ${
+                      className={`w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex flex-col items-center justify-center gap-1 text-xs sm:text-sm text-center ${
                         product.prestec
                           ? 'bg-green-500 text-white hover:bg-green-600'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -297,11 +297,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         height={20}
                         className="w-5 h-5"
                       />
-                      {product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
+                      {t('products.prestec')}
                     </button>
+                    <Link
+                      href={`/app/products/${product.id}/edit`}
+                      className="w-24 h-24 sm:w-28 sm:h-28 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-xs sm:text-sm text-center flex items-center justify-center"
+                    >
+                      {t('common.edit')}
+                    </Link>
                     <button
                       onClick={deleteProduct}
-                      className="bg-red-600 dark:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-sm sm:text-base"
+                      className="w-24 h-24 sm:w-28 sm:h-28 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-xs sm:text-sm text-center flex items-center justify-center"
                     >
                       {t('productDetail.delete')}
                     </button>
