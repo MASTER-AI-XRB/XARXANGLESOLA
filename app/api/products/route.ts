@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
     // Validar nom
     const nameValidation = validateProductName(name)
     if (!nameValidation.valid) {
-      return apiError(nameValidation.error, 400)
+      return apiError(nameValidation.error || 'Nom de producte no vàlid', 400)
     }
 
     // Validar descripció
     const descValidation = validateDescription(description)
     if (!descValidation.valid) {
-      return apiError(descValidation.error, 400)
+      return apiError(descValidation.error || 'Descripció no vàlida', 400)
     }
 
     if (images.length === 0) {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     for (const image of images) {
       const imageValidation = validateImageFile(image)
       if (!imageValidation.valid) {
-        return apiError(imageValidation.error, 400)
+        return apiError(imageValidation.error || 'Imatge no vàlida', 400)
       }
     }
 

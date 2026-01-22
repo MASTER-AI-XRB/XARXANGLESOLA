@@ -14,7 +14,7 @@ export async function GET(
     const resolvedParams = params instanceof Promise ? await params : params
     const idValidation = validateUuid(resolvedParams.id, 'producte')
     if (!idValidation.valid) {
-      return apiError(idValidation.error, 400)
+      return apiError(idValidation.error || 'Producte no vàlid', 400)
     }
     const product = await prisma.product.findUnique({
       where: { id: resolvedParams.id },
@@ -46,7 +46,7 @@ export async function DELETE(
     const resolvedParams = params instanceof Promise ? await params : params
     const idValidation = validateUuid(resolvedParams.id, 'producte')
     if (!idValidation.valid) {
-      return apiError(idValidation.error, 400)
+      return apiError(idValidation.error || 'Producte no vàlid', 400)
     }
     const authUserId = getAuthUserId(request)
 

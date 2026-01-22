@@ -26,7 +26,7 @@ export async function PATCH(
     const resolvedParams = params instanceof Promise ? await params : params
     const idValidation = validateUuid(resolvedParams.id, 'producte')
     if (!idValidation.valid) {
-      return apiError(idValidation.error, 400)
+      return apiError(idValidation.error || 'Producte no vàlid', 400)
     }
     const authUserId = getAuthUserId(request)
     const { reserved } = await request.json()
