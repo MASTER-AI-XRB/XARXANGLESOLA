@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
     const productIdValidation = validateUuid(productId, 'producte')
     if (!productIdValidation.valid) {
-      return apiError(productIdValidation.error, 400)
+      return apiError(productIdValidation.error || 'Producte no vàlid', 400)
     }
 
     // Comprovar si ja existeix
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest) {
     }
     const productIdValidation = validateUuid(productId, 'producte')
     if (!productIdValidation.valid) {
-      return apiError(productIdValidation.error, 400)
+      return apiError(productIdValidation.error || 'Producte no vàlid', 400)
     }
 
     await prisma.favorite.delete({
