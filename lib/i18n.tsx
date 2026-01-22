@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { logError, logWarn } from '@/lib/client-logger'
 
 export type Locale = 'ca' | 'es' | 'en'
 
@@ -585,7 +586,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
       return text
     } catch (error) {
-      console.error('Error translating text:', error)
+      logError('Error translating text:', error)
       return text
     }
   }
@@ -601,7 +602,7 @@ export function useI18n() {
   const context = useContext(I18nContext)
   if (!context) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('useI18n must be used within I18nProvider')
+      logWarn('useI18n must be used within I18nProvider')
     }
     return {
       locale: 'ca' as Locale,

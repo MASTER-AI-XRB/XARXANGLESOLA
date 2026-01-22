@@ -2,40 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateNickname, sanitizeString } from '@/lib/validation'
 import bcrypt from 'bcryptjs'
+import { createSessionToken, sessionCookieName, sessionMaxAgeSeconds } from '@/lib/auth'
+import { apiError } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
     const { nickname, email, password, isNewUser } = await request.json()
 
     if (!nickname) {
-      return NextResponse.json(
-        { error: 'El nickname és obligatori' },
-        { status: 400 }
-      )
+      return apiError('El nickname és obligatori', 400)
     }
 
     if (!password) {
-      return NextResponse.json(
-        { error: 'La contrasenya és obligatòria' },
-        { status: 400 }
-      )
+      return apiError('La contrasenya és obligatòria', 400)
     }
 
     // Validar nickname
     const validation = validateNickname(nickname)
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      )
+      return apiError(validation.error || 'Nickname invàlid', 400)
     }
 
     // Validar contrasenya
     if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'La contrasenya ha de tenir almenys 6 caràcters' },
-        { status: 400 }
-      )
+      return apiError('La contrasenya ha de tenir almenys 6 caràcters', 400)
     }
 
     const sanitizedNickname = sanitizeString(nickname, 20)
@@ -48,27 +39,18 @@ export async function POST(request: NextRequest) {
     if (isNewUser) {
       // Validacions per a nous usuaris
       if (!email) {
-        return NextResponse.json(
-          { error: 'L\'email és obligatori per a nous usuaris' },
-          { status: 400 }
-        )
+        return apiError('L\'email és obligatori per a nous usuaris', 400)
       }
 
       // Validar format d'email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email.trim())) {
-        return NextResponse.json(
-          { error: 'Format d\'email invàlid' },
-          { status: 400 }
-        )
+        return apiError('Format d\'email invàlid', 400)
       }
 
       // Comprovar si l'usuari ja existeix
       if (user) {
-        return NextResponse.json(
-          { error: 'Aquest nickname ja està en ús' },
-          { status: 400 }
-        )
+        return apiError('Aquest nickname ja està en ús', 400)
       }
 
       // Comprovar si l'email ja està en ús
@@ -77,10 +59,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (existingEmail) {
-        return NextResponse.json(
-          { error: 'Aquest email ja està registrat' },
-          { status: 400 }
-        )
+        return apiError('Aquest email ja està registrat', 400)
       }
 
       // Crear nou usuari amb email i contrasenya encriptada
@@ -95,10 +74,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Login d'usuari existent
       if (!user) {
-        return NextResponse.json(
-          { error: 'Nickname o contrasenya incorrectes' },
-          { status: 401 }
-        )
+        return apiError('Nickname o contrasenya incorrectes', 401)
       }
 
       // Si l'usuari no té contrasenya (usuaris antics), crear-la
@@ -112,42 +88,41 @@ export async function POST(request: NextRequest) {
         // Verificar contrasenya per a usuaris existents
         const isValidPassword = await bcrypt.compare(password, user.password)
         if (!isValidPassword) {
-          return NextResponse.json(
-            { error: 'Nickname o contrasenya incorrectes' },
-            { status: 401 }
-          )
+          return apiError('Nickname o contrasenya incorrectes', 401)
         }
       }
     }
 
-    return NextResponse.json({
-      userId: user.id,
+    const token = createSessionToken(user.id, user.nickname)
+    if (!token && process.env.NODE_ENV === 'production') {
+      return apiError('AUTH_SECRET no configurat a producció', 500)
+    }
+    const response = NextResponse.json({
       nickname: user.nickname,
+      socketToken: token || null,
     })
+    if (token) {
+      response.cookies.set(sessionCookieName, token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: sessionMaxAgeSeconds,
+        path: '/',
+      })
+    }
+    return response
   } catch (error) {
-    console.error('Error en login:', error)
-    console.error('Error details:', error instanceof Error ? error.message : String(error))
-    console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace')
-    
-    // Log més detallat per Vercel
-    if (error instanceof Error) {
-      console.error('Error name:', error.name)
-      console.error('Error message:', error.message)
-    }
-    
-    // Verificar si és un error de Prisma
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error('Prisma error code:', (error as any).code)
-    }
-    
+    logError('Error en login:', error)
+
     // No revelar detalls de l'error a l'usuari, però logar-lo per debugging
-    return NextResponse.json(
-      { 
-        error: 'Error al iniciar sessió',
-        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
-      },
-      { status: 500 }
-    )
+    return apiError('Error al iniciar sessió', 500, {
+      details:
+        process.env.NODE_ENV === 'development'
+          ? error instanceof Error
+            ? error.message
+            : String(error)
+          : undefined,
+    })
   } finally {
     // Desconnectar Prisma després de cada operació a Vercel
     await prisma.$disconnect().catch(() => {

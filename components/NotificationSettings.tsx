@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
+import { logError } from '@/lib/client-logger'
 
 export default function NotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
@@ -10,7 +11,7 @@ export default function NotificationSettings() {
   const [showEnableModal, setShowEnableModal] = useState(false)
   const [showPreferencesModal, setShowPreferencesModal] = useState(false)
   const [isPWA, setIsPWA] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [nickname, setNickname] = useState<string | null>(null)
   const [prefsLoading, setPrefsLoading] = useState(false)
   const [prefsSaving, setPrefsSaving] = useState(false)
   const [prefsError, setPrefsError] = useState<string | null>(null)
@@ -33,26 +34,31 @@ export default function NotificationSettings() {
         (typeof document !== 'undefined' && document.referrer.includes('android-app://'))
       setIsPWA(isStandalone)
     }
-    setUserId(localStorage.getItem('userId'))
+    setNickname(localStorage.getItem('nickname'))
   }, [])
 
   useEffect(() => {
-    if (!userId) return
+    if (!nickname) return
     setPrefsLoading(true)
     setPrefsError(null)
-    fetch(`/api/notification-preferences?userId=${userId}`)
-      .then((res) => res.json())
+    fetch('/api/notification-preferences')
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error('Error carregant preferències')
+        }
+        return res.json()
+      })
       .then((data) => {
         setReceiveAll(data.receiveAll !== false)
         setAllowedNicknamesInput((data.allowedNicknames || []).join(', '))
         setAllowedKeywordsInput((data.allowedProductKeywords || []).join(', '))
       })
       .catch((error) => {
-        console.error('Error carregant preferències:', error)
+        logError('Error carregant preferències:', error)
         setPrefsError(t('notifications.preferencesError') || 'Error carregant preferències')
       })
       .finally(() => setPrefsLoading(false))
-  }, [userId, t])
+  }, [nickname, t])
 
   // Actualitzar l'estat quan canvia el permís (per si canvia des de fora)
   useEffect(() => {
@@ -114,12 +120,12 @@ export default function NotificationSettings() {
           // Si continua en 'denied' o 'default', no mostrar cap missatge
         } catch (error) {
           // Si requestPermission llança un error, mostrar modal amb instruccions
-          console.error('Error demanant permís:', error)
+          logError('Error demanant permís:', error)
           setShowEnableModal(true)
         }
       }
     } catch (error) {
-      console.error('Error general gestionant notificacions:', error)
+      logError('Error general gestionant notificacions:', error)
     }
   }
 
@@ -157,7 +163,7 @@ export default function NotificationSettings() {
             </svg>
           )}
         </button>
-        {userId && (
+        {nickname && (
           <button
             onClick={() => {
               setShowPreferencesModal(true)
@@ -383,7 +389,6 @@ export default function NotificationSettings() {
               </button>
               <button
                 onClick={async () => {
-                  if (!userId) return
                   setPrefsSaving(true)
                   setPrefsError(null)
                   setPrefsSaved(false)
@@ -392,7 +397,6 @@ export default function NotificationSettings() {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
-                        userId,
                         receiveAll,
                         allowedNicknames: allowedNicknamesInput,
                         allowedProductKeywords: allowedKeywordsInput,
@@ -404,7 +408,7 @@ export default function NotificationSettings() {
                     }
                     setPrefsSaved(true)
                   } catch (error) {
-                    console.error('Error guardant preferències:', error)
+                    logError('Error guardant preferències:', error)
                     setPrefsError(
                       t('notifications.preferencesError') || 'No s\'han pogut desar les preferències'
                     )

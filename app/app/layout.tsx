@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
 import NotificationSettings from '@/components/NotificationSettings'
+import { clearStoredSession, getStoredNickname } from '@/lib/client-session'
 import DevConsole from '@/components/DevConsole'
 
 export default function AppLayout({
@@ -21,7 +22,7 @@ export default function AppLayout({
   const { t } = useI18n()
 
   useEffect(() => {
-    const savedNickname = localStorage.getItem('nickname')
+    const savedNickname = getStoredNickname()
     if (!savedNickname) {
       router.push('/')
       return
@@ -30,8 +31,8 @@ export default function AppLayout({
   }, [router])
 
   const handleLogout = () => {
-    localStorage.removeItem('nickname')
-    localStorage.removeItem('userId')
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+    clearStoredSession()
     router.push('/')
   }
 

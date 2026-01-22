@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import TranslateButton from '@/components/TranslateButton'
+import { getStoredNickname } from '@/lib/client-session'
+import { logError } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -15,10 +17,8 @@ interface Product {
   images: string[]
   reserved: boolean
   prestec: boolean
-  userId: string
   user: {
     nickname: string
-    id: string
   }
   createdAt: string
 }
@@ -29,7 +29,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [productId, setProductId] = useState<string | null>(null)
   const router = useRouter()
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const nickname = getStoredNickname()
   const { t } = useI18n()
   const { theme } = useTheme()
 
@@ -58,7 +58,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         router.push('/app')
       }
     } catch (error) {
-      console.error('Error carregant producte:', error)
+      logError('Error carregant producte:', error)
       router.push('/app')
     } finally {
       setLoading(false)
@@ -66,57 +66,55 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const toggleReserved = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${product.id}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: !product.reserved }),
       })
       if (response.ok) {
         const data = await response.json()
         setProduct({ ...product, reserved: data.reserved })
       }
     } catch (error) {
-      console.error('Error actualitzant reserva:', error)
+      logError('Error actualitzant reserva:', error)
     }
   }
 
   const togglePrestec = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${product.id}/loan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, prestec: !product.prestec }),
+        body: JSON.stringify({ prestec: !product.prestec }),
       })
       if (response.ok) {
         const data = await response.json()
         setProduct({ ...product, prestec: data.prestec })
       }
     } catch (error) {
-      console.error('Error actualitzant préstec:', error)
+      logError('Error actualitzant préstec:', error)
     }
   }
 
   const deleteProduct = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     if (!confirm(t('products.deleteConfirm'))) return
 
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
       })
       if (response.ok) {
         router.push('/app')
       }
     } catch (error) {
-      console.error('Error eliminant producte:', error)
+      logError('Error eliminant producte:', error)
     }
   }
 
@@ -242,7 +240,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     {product.user.nickname}
                   </p>
                 </div>
-                {userId && userId === product.userId ? (
+                {nickname && nickname === product.user.nickname ? (
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button
                       onClick={toggleReserved}
@@ -307,7 +305,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     </button>
                   </div>
                 ) : (
-                  userId && (
+                  nickname && (
                     <Link
                       href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}`}
                       className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"

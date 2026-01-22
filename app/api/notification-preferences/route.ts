@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getAuthUserId } from '@/lib/auth'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 function getPrisma() {
   return new PrismaClient({
@@ -15,21 +18,27 @@ const parseList = (value?: string | null): string[] =>
         .filter(Boolean)
     : []
 
+const normalizeList = (items: string[], maxItems: number, maxLength: number) => {
+  const normalized = items
+    .map((item) => item.trim().slice(0, maxLength))
+    .filter(Boolean)
+  return normalized.slice(0, maxItems)
+}
+
 export async function GET(request: NextRequest) {
   const prisma = getPrisma()
   try {
-    const userId = request.headers.get('x-user-id') || new URL(request.url).searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ error: 'Usuari no autenticat' }, { status: 401 })
+    const authUserId = getAuthUserId(request)
+    if (!authUserId) {
+      return apiError('Usuari no autenticat', 401)
     }
 
     const existing = await prisma.notificationPreference.findUnique({
-      where: { userId },
+      where: { userId: authUserId },
     })
 
     if (!existing) {
-      return NextResponse.json({
-        userId,
+      return apiOk({
         receiveAll: true,
         allowedNicknames: [],
         allowedProductKeywords: [],
@@ -37,8 +46,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      userId,
+    return apiOk({
       receiveAll: existing.receiveAll,
       allowedNicknames: existing.allowedNicknames ? JSON.parse(existing.allowedNicknames) : [],
       allowedProductKeywords: existing.allowedProductKeywords
@@ -47,11 +55,8 @@ export async function GET(request: NextRequest) {
       enabledTypes: existing.enabledTypes ? JSON.parse(existing.enabledTypes) : [],
     })
   } catch (error) {
-    console.error('Error carregant preferències de notificació:', error)
-    return NextResponse.json(
-      { error: 'Error carregant preferències de notificació' },
-      { status: 500 }
-    )
+    logError('Error carregant preferències de notificació:', error)
+    return apiError('Error carregant preferències de notificació', 500)
   } finally {
     await prisma.$disconnect()
   }
@@ -60,25 +65,30 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const prisma = getPrisma()
   try {
-    const { userId, receiveAll, allowedNicknames, allowedProductKeywords, enabledTypes } =
+    const { receiveAll, allowedNicknames, allowedProductKeywords, enabledTypes } =
       await request.json()
+    const authUserId = getAuthUserId(request)
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Usuari no autenticat' }, { status: 401 })
+    if (!authUserId) {
+      return apiError('Usuari no autenticat', 401)
     }
 
-    const nicknames = Array.isArray(allowedNicknames)
+    const nicknamesRaw = Array.isArray(allowedNicknames)
       ? allowedNicknames
       : parseList(allowedNicknames)
-    const keywords = Array.isArray(allowedProductKeywords)
+    const keywordsRaw = Array.isArray(allowedProductKeywords)
       ? allowedProductKeywords
       : parseList(allowedProductKeywords)
-    const types = Array.isArray(enabledTypes) ? enabledTypes : parseList(enabledTypes)
+    const typesRaw = Array.isArray(enabledTypes) ? enabledTypes : parseList(enabledTypes)
+
+    const nicknames = normalizeList(nicknamesRaw, 25, 20)
+    const keywords = normalizeList(keywordsRaw, 25, 50)
+    const types = normalizeList(typesRaw, 25, 30)
 
     const saved = await prisma.notificationPreference.upsert({
-      where: { userId },
+      where: { userId: authUserId },
       create: {
-        userId,
+        userId: authUserId,
         receiveAll: receiveAll !== false,
         allowedNicknames: JSON.stringify(nicknames),
         allowedProductKeywords: JSON.stringify(keywords),
@@ -92,19 +102,15 @@ export async function PUT(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
-      userId: saved.userId,
+    return apiOk({
       receiveAll: saved.receiveAll,
       allowedNicknames: nicknames,
       allowedProductKeywords: keywords,
       enabledTypes: types,
     })
   } catch (error) {
-    console.error('Error guardant preferències de notificació:', error)
-    return NextResponse.json(
-      { error: 'Error guardant preferències de notificació' },
-      { status: 500 }
-    )
+    logError('Error guardant preferències de notificació:', error)
+    return apiError('Error guardant preferències de notificació', 500)
   } finally {
     await prisma.$disconnect()
   }
