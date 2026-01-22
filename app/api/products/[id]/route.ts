@@ -93,9 +93,9 @@ export async function PATCH(
   try {
     const resolvedParams = params instanceof Promise ? await params : params
     const formData = await request.formData()
-    const userId = formData.get('userId') as string | null
+    const authUserId = getAuthUserId(request)
 
-    if (!userId) {
+    if (!authUserId) {
       return NextResponse.json(
         { error: 'Usuari no autenticat' },
         { status: 401 }
@@ -113,7 +113,7 @@ export async function PATCH(
       )
     }
 
-    if (product.userId !== userId) {
+    if (product.userId !== authUserId) {
       return NextResponse.json(
         { error: 'No tens permisos per modificar aquest producte' },
         { status: 403 }

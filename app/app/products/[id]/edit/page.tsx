@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
+import { getStoredNickname } from '@/lib/client-session'
 
 interface Product {
   id: string
   name: string
   description: string | null
   images: string[]
-  userId: string
+  user: {
+    nickname: string
+  }
 }
 
 export default function EditProductPage({
@@ -39,8 +42,8 @@ export default function EditProductPage({
   useEffect(() => {
     if (!productId) return
 
-    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
-    if (!userId) {
+    const nickname = getStoredNickname()
+    if (!nickname) {
       router.push('/')
       return
     }
@@ -53,7 +56,7 @@ export default function EditProductPage({
           return
         }
         const data = (await response.json()) as Product
-        if (data.userId !== userId) {
+        if (data.user?.nickname !== nickname) {
           router.push('/app')
           return
         }
@@ -123,8 +126,7 @@ export default function EditProductPage({
       return
     }
 
-    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
-    if (!userId || !productId) {
+    if (!productId) {
       setError(t('newProduct.userNotAuth'))
       setLoading(false)
       return
@@ -134,7 +136,6 @@ export default function EditProductPage({
       const formData = new FormData()
       formData.append('name', name)
       formData.append('description', description)
-      formData.append('userId', userId)
       formData.append('existingImages', JSON.stringify(existingImages))
       newImages.forEach((image) => {
         formData.append('images', image)

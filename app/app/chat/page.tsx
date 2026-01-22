@@ -26,14 +26,61 @@ export default function ChatPage() {
   const [privateChats, setPrivateChats] = useState<{ [key: string]: Message[] }>({})
   const [activePrivateChat, setActivePrivateChat] = useState<string | null>(null)
   const [openPrivateChats, setOpenPrivateChats] = useState<string[]>([])
+  const [unreadPrivateChats, setUnreadPrivateChats] = useState<Record<string, number>>({})
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [isOnlineUsersDrawerOpen, setIsOnlineUsersDrawerOpen] = useState(false)
+  const [hasRestoredChats, setHasRestoredChats] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const nickname = getStoredNickname()
   const { t, locale } = useI18n()
   const { showInfo } = useNotifications()
   const router = useRouter()
+
+  useEffect(() => {
+    if (!nickname || typeof window === 'undefined') return
+
+    setHasRestoredChats(false)
+
+    const openChatsKey = `chat:${nickname}:openPrivateChats`
+    const activeChatKey = `chat:${nickname}:activePrivateChat`
+
+    const storedOpen = window.localStorage.getItem(openChatsKey)
+    if (storedOpen) {
+      try {
+        const parsed = JSON.parse(storedOpen)
+        if (Array.isArray(parsed)) {
+          setOpenPrivateChats(parsed.filter((item) => typeof item === 'string'))
+        }
+      } catch {
+        window.localStorage.removeItem(openChatsKey)
+      }
+    }
+
+    const storedActive = window.localStorage.getItem(activeChatKey)
+    if (storedActive) {
+      setActivePrivateChat(storedActive)
+      setOpenPrivateChats((prev) =>
+        prev.includes(storedActive) ? prev : [...prev, storedActive]
+      )
+    }
+
+    setHasRestoredChats(true)
+  }, [nickname])
+
+  useEffect(() => {
+    if (!nickname || typeof window === 'undefined' || !hasRestoredChats) return
+
+    const openChatsKey = `chat:${nickname}:openPrivateChats`
+    const activeChatKey = `chat:${nickname}:activePrivateChat`
+
+    window.localStorage.setItem(openChatsKey, JSON.stringify(openPrivateChats))
+    if (activePrivateChat) {
+      window.localStorage.setItem(activeChatKey, activePrivateChat)
+    } else {
+      window.localStorage.removeItem(activeChatKey)
+    }
+  }, [nickname, openPrivateChats, activePrivateChat])
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
@@ -300,6 +347,10 @@ export default function ChatPage() {
         if (activePrivateChat === otherUserNickname) {
           scrollToBottom()
         } else {
+          setUnreadPrivateChats((prev) => ({
+            ...prev,
+            [otherUserNickname]: (prev[otherUserNickname] || 0) + 1,
+          }))
           // Notificació si no estàs al xat privat actiu o no estàs a la pàgina de xat
           if (typeof window !== 'undefined' && 
               (!window.location.pathname.includes('/chat') || activePrivateChat !== otherUserNickname)) {
@@ -378,10 +429,36 @@ export default function ChatPage() {
   }, [messages, privateChats, activePrivateChat])
 
   useEffect(() => {
+    if (!hasRestoredChats) return
+    if (activePrivateChat && !openPrivateChats.includes(activePrivateChat)) {
+      setActivePrivateChat(null)
+    }
+  }, [activePrivateChat, openPrivateChats, hasRestoredChats])
+
+  useEffect(() => {
+    if (!activePrivateChat) return
+    setUnreadPrivateChats((prev) => {
+      if (!prev[activePrivateChat]) return prev
+      const next = { ...prev }
+      delete next[activePrivateChat]
+      return next
+    })
+  }, [activePrivateChat])
+
+  useEffect(() => {
     if (!activePrivateChat && socket && connected) {
       socket.emit('join-general')
     }
   }, [activePrivateChat, socket, connected])
+
+  useEffect(() => {
+    if (!socket || !connected) return
+
+    openPrivateChats.forEach((chatNickname) => {
+      socket.emit('join-private', chatNickname)
+      socket.emit('load-private-messages', chatNickname)
+    })
+  }, [socket, connected, openPrivateChats])
 
   // Gestió de reconnexió quan el socket es reconecta
   useEffect(() => {
@@ -420,6 +497,12 @@ export default function ChatPage() {
       }
       return prev
     })
+    setUnreadPrivateChats((prev) => {
+      if (!prev[targetNickname]) return prev
+      const next = { ...prev }
+      delete next[targetNickname]
+      return next
+    })
     socket.emit('join-private', targetNickname)
     socket.emit('load-private-messages', targetNickname)
   }
@@ -427,6 +510,12 @@ export default function ChatPage() {
   const closePrivateChat = (targetNickname: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setOpenPrivateChats((prev) => prev.filter((nick) => nick !== targetNickname))
+    setUnreadPrivateChats((prev) => {
+      if (!prev[targetNickname]) return prev
+      const next = { ...prev }
+      delete next[targetNickname]
+      return next
+    })
     if (activePrivateChat === targetNickname) {
       setActivePrivateChat(null)
     }
@@ -476,18 +565,37 @@ export default function ChatPage() {
           {openPrivateChats.map((chatNickname) => (
             <button
               key={chatNickname}
-              onClick={() => setActivePrivateChat(chatNickname)}
+              onClick={() => {
+                setActivePrivateChat(chatNickname)
+                setUnreadPrivateChats((prev) => {
+                  if (!prev[chatNickname]) return prev
+                  const next = { ...prev }
+                  delete next[chatNickname]
+                  return next
+                })
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-t-lg whitespace-nowrap transition relative group ${
                 activePrivateChat === chatNickname
                   ? 'bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 border-b-2 border-blue-700 dark:border-blue-400 font-semibold'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
+              {unreadPrivateChats[chatNickname] ? (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 z-10" />
+              ) : null}
               <span>{t('chat.privateWith', { nickname: chatNickname })}</span>
-              <button
-                onClick={(e) => closePrivateChat(chatNickname, e)}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => closePrivateChat(chatNickname, e as unknown as React.MouseEvent)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    closePrivateChat(chatNickname, e as unknown as React.MouseEvent)
+                  }
+                }}
                 className="ml-1 w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-600 transition opacity-0 group-hover:opacity-100"
                 title={t('chat.closeChat')}
+                aria-label={t('chat.closeChat')}
               >
                 <svg
                   className="w-3 h-3"
@@ -502,7 +610,7 @@ export default function ChatPage() {
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
-              </button>
+              </span>
             </button>
           ))}
 

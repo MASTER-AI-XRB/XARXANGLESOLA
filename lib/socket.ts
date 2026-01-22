@@ -7,7 +7,32 @@ export function getSocketUrl(): string | null {
     hostname.includes('vercel.com') ||
     hostname.includes('railway.app')
 
-  let socketUrl = rawEnvUrl
+  const isLocalhostHost = hostname === 'localhost' || hostname === '127.0.0.1'
+  const isEnvLocalhost = rawEnvUrl.includes('localhost') || rawEnvUrl.includes('127.0.0.1')
+
+  const override =
+    isBrowser && window.localStorage
+      ? window.localStorage.getItem('socketUrlOverride')
+      : null
+
+  if (override) {
+    if (override === 'env') {
+      return rawEnvUrl || null
+    }
+    if (override === 'local') {
+      const protocol = window.location.protocol === 'https:' ? 'https://' : 'http://'
+      const host = hostname || 'localhost'
+      return `${protocol}${host}:3001`
+    }
+    if (override.startsWith('http://') || override.startsWith('https://')) {
+      return override
+    }
+  }
+
+  let socketUrl =
+    isLocalhostHost && rawEnvUrl && !isEnvLocalhost
+      ? ''
+      : rawEnvUrl
 
   if (!socketUrl && isBrowser && !isProductionHost) {
     const protocol = window.location.protocol === 'https:' ? 'https://' : 'http://'

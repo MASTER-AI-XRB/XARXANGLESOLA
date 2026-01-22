@@ -7,6 +7,9 @@ export default function DevConsole() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isConsoleOpen, setIsConsoleOpen] = useState(false)
   const [isLocal, setIsLocal] = useState(false)
+  const [socketOverride, setSocketOverride] = useState<string>('auto')
+
+  const envSocketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
 
   useEffect(() => {
     // Comprovar si estem en local (localhost o 127.0.0.1)
@@ -14,6 +17,8 @@ export default function DevConsole() {
       const hostname = window.location.hostname
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')
       setIsLocal(isLocalhost && process.env.NODE_ENV === 'development')
+      const stored = window.localStorage.getItem('socketUrlOverride')
+      setSocketOverride(stored || 'auto')
     }
   }, [])
 
@@ -142,6 +147,64 @@ export default function DevConsole() {
                   </div>
                 </div>
               )}
+
+              <div className="border-t dark:border-gray-700 pt-4">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Socket (dev)</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 mb-2 break-words">
+                  Env: {envSocketUrl || '—'}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      if (typeof window === 'undefined') return
+                      window.localStorage.removeItem('socketUrlOverride')
+                      setSocketOverride('auto')
+                      window.location.reload()
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border ${
+                      socketOverride === 'auto'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    Auto (detectar)
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (typeof window === 'undefined') return
+                      window.localStorage.setItem('socketUrlOverride', 'local')
+                      setSocketOverride('local')
+                      window.location.reload()
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border ${
+                      socketOverride === 'local'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    Local (host:3001)
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!envSocketUrl || typeof window === 'undefined') return
+                      window.localStorage.setItem('socketUrlOverride', 'env')
+                      setSocketOverride('env')
+                      window.location.reload()
+                    }}
+                    disabled={!envSocketUrl}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border ${
+                      socketOverride === 'env'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                    } ${!envSocketUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    Env (Railway/Vercel)
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Canvia i recarrega la pàgina automàticament.
+                </div>
+              </div>
             </div>
           </div>
         </>
