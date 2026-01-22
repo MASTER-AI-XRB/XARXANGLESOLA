@@ -62,3 +62,15 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   return { valid: true }
 }
 
+export function validateUuid(value: string, fieldLabel: string): { valid: boolean; error?: string } {
+  if (!value) {
+    return { valid: false, error: `${fieldLabel} és obligatori` }
+  }
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(value)) {
+    return { valid: false, error: `${fieldLabel} no és vàlid` }
+  }
+  return { valid: true }
+}
+

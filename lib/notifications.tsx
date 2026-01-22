@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
 import { Notification } from '@/components/NotificationToast'
 import NotificationToast from '@/components/NotificationToast'
+import { logError } from '@/lib/client-logger'
 
 interface NotificationContextType {
   showNotification: (notification: Omit<Notification, 'id'>) => void
@@ -74,7 +75,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch (error) {
-          console.error('Error creant notificació del navegador:', error)
+          logError('Error creant notificació del navegador:', error)
         }
       }
     }

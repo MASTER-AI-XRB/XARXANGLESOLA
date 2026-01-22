@@ -1,33 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateNickname } from '@/lib/validation'
+import { apiError, apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { nickname: string } }
 ) {
   try {
+    const nickname = params?.nickname
+    if (!nickname) {
+      return apiError('Nickname invàlid', 400)
+    }
+    const nicknameValidation = validateNickname(nickname)
+    if (!nicknameValidation.valid) {
+      return apiError(nicknameValidation.error || 'Nickname invàlid', 400)
+    }
+
     const user = await prisma.user.findUnique({
-      where: { nickname: params.nickname },
+      where: { nickname },
       select: {
-        id: true,
         nickname: true,
       },
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuari no trobat' },
-        { status: 404 }
-      )
+      return apiError('Usuari no trobat', 404)
     }
 
-    return NextResponse.json(user)
+    return apiOk(user)
   } catch (error) {
-    console.error('Error carregant usuari:', error)
-    return NextResponse.json(
-      { error: 'Error carregant usuari' },
-      { status: 500 }
-    )
+    logError('Error carregant usuari:', error)
+    return apiError('Error carregant usuari', 500)
   }
 }
 

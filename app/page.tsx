@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
+import { getStoredNickname, setStoredSession } from '@/lib/client-session'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -31,7 +32,7 @@ export default function Home() {
 
   useEffect(() => {
     // Comprovar si ja hi ha un usuari loguejat
-    const savedNickname = localStorage.getItem('nickname')
+    const savedNickname = getStoredNickname()
     if (savedNickname) {
       router.push('/app')
     }
@@ -397,13 +398,11 @@ export default function Home() {
             requestAnimationFrame(expandAnimate)
           } else {
             // Guardar dades i navegar
-            localStorage.setItem('nickname', data.nickname)
-            localStorage.setItem('userId', data.userId)
+            setStoredSession(data.nickname, data.socketToken)
             router.push('/app')
             
             // Guardar dades abans de continuar
-            localStorage.setItem('nickname', data.nickname)
-            localStorage.setItem('userId', data.userId)
+            setStoredSession(data.nickname, data.socketToken)
             
             // Esperar un moment (simular càrrega de l'app) i després reduir el logo
             setTimeout(() => {
@@ -606,7 +605,10 @@ export default function Home() {
             </div>
           )}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+            <div
+              data-testid="auth-error"
+              className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded"
+            >
               {error}
             </div>
           )}
@@ -675,7 +677,10 @@ export default function Home() {
                   />
                 </div>
                 {error && (
-                  <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+                  <div
+                    data-testid="forgot-error"
+                    className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded"
+                  >
                     {error}
                   </div>
                 )}

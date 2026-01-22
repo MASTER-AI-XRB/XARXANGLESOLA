@@ -10,6 +10,8 @@ import { useTheme } from '@/lib/theme'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
 import { getSocketUrl } from '@/lib/socket'
+import { getStoredNickname, getStoredSocketToken } from '@/lib/client-session'
+import { logError, logInfo, logWarn } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -18,7 +20,6 @@ interface Product {
   images: string[]
   reserved: boolean
   prestec: boolean
-  userId: string
   user: {
     nickname: string
   }
@@ -42,8 +43,7 @@ export default function ProductsPage() {
   })
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const router = useRouter()
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
-  const nickname = typeof window !== 'undefined' ? localStorage.getItem('nickname') : null
+  const nickname = getStoredNickname()
   const { t } = useI18n()
 
   const refreshProducts = async () => {
@@ -51,22 +51,27 @@ export default function ProductsPage() {
   }
 
   useEffect(() => {
-    if (!userId) {
+    if (!nickname) {
       router.push('/')
       return
     }
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, userId])
+  }, [router, nickname])
 
   // Connectar a Socket.IO per rebre notificacions
   useEffect(() => {
-    if (!userId || !nickname) return
+    if (!nickname) return
 
     const socketUrl = getSocketUrl()
     if (!socketUrl) return
+    const socketToken = getStoredSocketToken()
+    if (!socketToken) {
+      logWarn('⚠️ Socket auth token absent. Torna a iniciar sessió.')
+      return
+    }
     const newSocket = io(socketUrl, {
-      query: { userId, nickname },
+      auth: { token: socketToken },
       transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -74,7 +79,7 @@ export default function ProductsPage() {
     })
 
     newSocket.on('connect', () => {
-      console.log('Connectat a Socket.IO per notificacions')
+      logInfo('Connectat a Socket.IO per notificacions')
     })
 
     // Escoltar notificacions de l'aplicació
@@ -97,7 +102,7 @@ export default function ProductsPage() {
     return () => {
       newSocket.close()
     }
-  }, [userId, nickname, showInfo, router])
+  }, [nickname, showInfo, router])
 
   const fetchProducts = async () => {
     try {
@@ -107,12 +112,12 @@ export default function ProductsPage() {
         setProducts(data)
         setFilteredProducts(data)
         // Carregar estat de preferits després de carregar productes
-        if (userId && data.length > 0) {
+        if (nickname && data.length > 0) {
           fetchFavoritesStatus(data)
         }
       }
     } catch (error) {
-      console.error('Error carregant productes:', error)
+      logError('Error carregant productes:', error)
     } finally {
       setLoading(false)
     }
@@ -158,13 +163,13 @@ export default function ProductsPage() {
   }, [filters, products])
 
   const fetchFavoritesStatus = async (productsList: Product[]) => {
-    if (!userId || !productsList || productsList.length === 0) return
+    if (!productsList || productsList.length === 0) return
     try {
       const favoriteStatuses = await Promise.all(
         productsList.map(async (product) => {
           try {
             const response = await fetch(
-              `/api/favorites/check?userId=${userId}&productId=${product.id}`
+              `/api/favorites/check?productId=${product.id}`
             )
             if (response.ok) {
               const data = await response.json()
@@ -172,7 +177,7 @@ export default function ProductsPage() {
             }
             return { productId: product.id, isFavorite: false }
           } catch (err) {
-            console.error(`Error comprovant preferit per producte ${product.id}:`, err)
+            logError(`Error comprovant preferit per producte ${product.id}:`, err)
             return { productId: product.id, isFavorite: false }
           }
         })
@@ -182,57 +187,52 @@ export default function ProductsPage() {
           .filter((status) => status.isFavorite)
           .map((status) => status.productId)
       )
-      console.log('Favorites set actualitzat:', Array.from(favoritesSet))
+      logInfo('Favorites set actualitzat:', Array.from(favoritesSet))
       setFavorites(favoritesSet)
     } catch (error) {
-      console.error('Error carregant estat de preferits:', error)
+      logError('Error carregant estat de preferits:', error)
     }
   }
 
   const toggleFavorite = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) {
-      console.error('No userId disponible')
-      return
-    }
-
     const isFavorite = favorites.has(productId)
-    console.log(`Toggle favorite per producte ${productId}, actualment és favorit: ${isFavorite}`)
+    logInfo(`Toggle favorite per producte ${productId}, actualment és favorit: ${isFavorite}`)
 
     try {
       let response
       if (isFavorite) {
-        console.log(`Eliminant preferit: userId=${userId}, productId=${productId}`)
+        logInfo(`Eliminant preferit: productId=${productId}`)
         response = await fetch('/api/favorites', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, productId }),
+          body: JSON.stringify({ productId }),
         })
       } else {
-        console.log(`Afegint preferit: userId=${userId}, productId=${productId}`)
+        logInfo(`Afegint preferit: productId=${productId}`)
         response = await fetch('/api/favorites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, productId }),
+          body: JSON.stringify({ productId }),
         })
       }
 
       const responseData = await response.json()
-      console.log(`Resposta de l'API:`, responseData)
+      logInfo(`Resposta de l'API:`, responseData)
 
       if (response.ok) {
-        console.log('Operació exitosa, refrescant estat...')
+        logInfo('Operació exitosa, refrescant estat...')
         // Refrescar estat de tots els preferits per assegurar que es manté
         if (products.length > 0) {
           await fetchFavoritesStatus(products)
         }
       } else {
-        console.error(`Error ${isFavorite ? 'eliminant' : 'afegint'} preferit:`, responseData)
+        logError(`Error ${isFavorite ? 'eliminant' : 'afegint'} preferit:`, responseData)
         alert(`Error: ${responseData.error || 'Error desconegut'}`)
       }
     } catch (error) {
-      console.error('Error actualitzant preferit:', error)
+      logError('Error actualitzant preferit:', error)
       alert('Error de connexió. Torna-ho a intentar.')
     }
   }
@@ -240,67 +240,59 @@ export default function ProductsPage() {
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) return
-
     const product = products.find((p) => p.id === productId)
-    if (!product || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: !product.reserved }),
       })
       if (response.ok) {
         // Refrescar tots els productes per assegurar que l'estat es manté
         await fetchProducts()
       }
     } catch (error) {
-      console.error('Error actualitzant reserva:', error)
+      logError('Error actualitzant reserva:', error)
     }
   }
 
   const togglePrestec = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) return
-
     const product = products.find((p) => p.id === productId)
-    if (!product || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${productId}/loan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, prestec: !product.prestec }),
+        body: JSON.stringify({ prestec: !product.prestec }),
       })
       if (response.ok) {
         // Refrescar tots els productes per assegurar que l'estat es manté
         await fetchProducts()
       }
     } catch (error) {
-      console.error('Error actualitzant préstec:', error)
+      logError('Error actualitzant préstec:', error)
     }
   }
 
   const deleteProduct = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) return
-
     if (!confirm(t('products.deleteConfirm'))) return
 
     try {
       const response = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
       })
       if (response.ok) {
         setProducts((prev) => prev.filter((p) => p.id !== productId))
       }
     } catch (error) {
-      console.error('Error eliminant producte:', error)
+      logError('Error eliminant producte:', error)
     }
   }
 
@@ -563,7 +555,7 @@ export default function ProductsPage() {
                       </svg>
                     </div>
                   )}
-                  {product.userId === userId ? (
+                  {product.user.nickname === nickname ? (
                     <>
                       {!product.reserved && (
                         <button
@@ -614,12 +606,13 @@ export default function ProductsPage() {
                       </button>
                     </>
                   ) : (
-                    <button
+                      <button
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         toggleFavorite(product.id, e)
                       }}
+                        data-testid={`favorite-toggle-${product.id}`}
                       className={`rounded-full p-2 shadow-md transition ${
                         favorites.has(product.id)
                           ? 'bg-red-500 hover:bg-red-600'
@@ -670,7 +663,7 @@ export default function ProductsPage() {
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2">
                     {/* Si ets propietari */}
-                    {product.userId === userId ? (
+                  {product.user.nickname === nickname ? (
                       <>
                         {/* Icona per reservar/desreservar (bookmark) */}
                         <button
@@ -754,6 +747,7 @@ export default function ProductsPage() {
                             ? 'bg-red-500 hover:bg-red-600'
                             : 'bg-white hover:bg-gray-100'
                         }`}
+                        data-testid={`favorite-toggle-${product.id}`}
                         aria-label={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                         title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                       >

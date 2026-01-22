@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import TranslateButton from '@/components/TranslateButton'
+import { getStoredNickname } from '@/lib/client-session'
+import { logError } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -15,7 +17,6 @@ interface Product {
   images: string[]
   reserved: boolean
   prestec: boolean
-  userId: string
   user: {
     nickname: string
   }
@@ -27,28 +28,27 @@ export default function MyProductsPage() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const router = useRouter()
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const nickname = getStoredNickname()
   const { t } = useI18n()
   const { theme } = useTheme()
 
   useEffect(() => {
-    if (!userId) {
+    if (!nickname) {
       router.push('/')
       return
     }
     fetchMyProducts()
-  }, [router, userId])
+  }, [router, nickname])
 
   const fetchMyProducts = async () => {
-    if (!userId) return
     try {
-      const response = await fetch(`/api/products/my?userId=${userId}`)
+      const response = await fetch('/api/products/my')
       if (response.ok) {
         const data = await response.json()
         setProducts(data)
       }
     } catch (error) {
-      console.error('Error carregant els meus productes:', error)
+      logError('Error carregant els meus productes:', error)
     } finally {
       setLoading(false)
     }
@@ -57,44 +57,40 @@ export default function MyProductsPage() {
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) return
-
     const product = products.find((p) => p.id === productId)
-    if (!product || product.userId !== userId) return
+    if (!product) return
 
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: !product.reserved }),
       })
       if (response.ok) {
         await fetchMyProducts()
       }
     } catch (error) {
-      console.error('Error actualitzant reserva:', error)
+      logError('Error actualitzant reserva:', error)
     }
   }
 
   const togglePrestec = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!userId) return
-
     const product = products.find((p) => p.id === productId)
-    if (!product || product.userId !== userId) return
+    if (!product) return
 
     try {
       const response = await fetch(`/api/products/${productId}/loan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, prestec: !product.prestec }),
+        body: JSON.stringify({ prestec: !product.prestec }),
       })
       if (response.ok) {
         await fetchMyProducts()
       }
     } catch (error) {
-      console.error('Error actualitzant préstec:', error)
+      logError('Error actualitzant préstec:', error)
     }
   }
 

@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import TranslateButton from '@/components/TranslateButton'
+import { getStoredNickname } from '@/lib/client-session'
+import { logError } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -15,10 +17,8 @@ interface Product {
   images: string[]
   reserved: boolean
   prestec: boolean
-  userId: string
   user: {
     nickname: string
-    id: string
   }
   createdAt: string
 }
@@ -29,7 +29,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [productId, setProductId] = useState<string | null>(null)
   const router = useRouter()
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const nickname = getStoredNickname()
   const { t } = useI18n()
   const { theme } = useTheme()
 
@@ -58,7 +58,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         router.push('/app')
       }
     } catch (error) {
-      console.error('Error carregant producte:', error)
+      logError('Error carregant producte:', error)
       router.push('/app')
     } finally {
       setLoading(false)
@@ -66,57 +66,55 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const toggleReserved = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${product.id}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: !product.reserved }),
       })
       if (response.ok) {
         const data = await response.json()
         setProduct({ ...product, reserved: data.reserved })
       }
     } catch (error) {
-      console.error('Error actualitzant reserva:', error)
+      logError('Error actualitzant reserva:', error)
     }
   }
 
   const togglePrestec = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     try {
       const response = await fetch(`/api/products/${product.id}/loan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, prestec: !product.prestec }),
+        body: JSON.stringify({ prestec: !product.prestec }),
       })
       if (response.ok) {
         const data = await response.json()
         setProduct({ ...product, prestec: data.prestec })
       }
     } catch (error) {
-      console.error('Error actualitzant préstec:', error)
+      logError('Error actualitzant préstec:', error)
     }
   }
 
   const deleteProduct = async () => {
-    if (!product || !userId || product.userId !== userId) return
+    if (!product || product.user.nickname !== nickname) return
 
     if (!confirm(t('products.deleteConfirm'))) return
 
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
       })
       if (response.ok) {
         router.push('/app')
       }
     } catch (error) {
-      console.error('Error eliminant producte:', error)
+      logError('Error eliminant producte:', error)
     }
   }
 
@@ -242,31 +240,34 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     {product.user.nickname}
                   </p>
                 </div>
-                {userId && userId === product.userId ? (
+                {nickname && nickname === product.user.nickname ? (
                   <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
                     <button
                       onClick={toggleReserved}
-                      className={`w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex flex-col items-center justify-center gap-1 text-xs sm:text-sm text-center ${
+                      aria-label={product.reserved ? t('products.unreserved') : t('products.reserve')}
+                      className={`group relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex items-center justify-center ${
                         product.reserved
                           ? 'bg-yellow-500 text-white hover:bg-yellow-600'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
+                      <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                        {product.reserved ? t('products.unreserved') : t('products.reserve')}
+                      </span>
                       {product.reserved ? (
                         <>
                           <svg
-                            className="w-5 h-5"
+                            className="w-10 h-10"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
                             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                           </svg>
-                          {t('products.unreserved')}
                         </>
                       ) : (
                         <>
                           <svg
-                            className="w-5 h-5"
+                            className="w-10 h-10"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -278,42 +279,76 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                               d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
                             />
                           </svg>
-                          {t('products.reserve')}
                         </>
                       )}
                     </button>
                     <button
                       onClick={togglePrestec}
-                      className={`w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex flex-col items-center justify-center gap-1 text-xs sm:text-sm text-center ${
+                      aria-label={t('products.prestec')}
+                      className={`group relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex items-center justify-center ${
                         product.prestec
                           ? 'bg-green-500 text-white hover:bg-green-600'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
+                      <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                        {t('products.prestec')}
+                      </span>
                       <Image
                         src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                         alt={product.prestec ? t('products.prestec') : ''}
-                        width={20}
-                        height={20}
-                        className="w-5 h-5"
+                        width={40}
+                        height={40}
+                        className="w-10 h-10"
                       />
-                      {t('products.prestec')}
                     </button>
                     <Link
                       href={`/app/products/${product.id}/edit`}
-                      className="w-24 h-24 sm:w-28 sm:h-28 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-xs sm:text-sm text-center flex items-center justify-center"
+                      aria-label={t('common.edit')}
+                      className="group relative w-24 h-24 sm:w-28 sm:h-28 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 flex items-center justify-center"
                     >
-                      {t('common.edit')}
+                      <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                        {t('common.edit')}
+                      </span>
+                      <svg
+                        className="w-10 h-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.9-9.9a1 1 0 000-1.414l-3.586-3.586a1 1 0 00-1.414 0l-9.9 9.9A1 1 0 004 15.414V20z"
+                        />
+                      </svg>
                     </Link>
                     <button
                       onClick={deleteProduct}
-                      className="w-24 h-24 sm:w-28 sm:h-28 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 text-xs sm:text-sm text-center flex items-center justify-center"
+                      aria-label={t('productDetail.delete')}
+                      className="group relative w-24 h-24 sm:w-28 sm:h-28 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 flex items-center justify-center"
                     >
-                      {t('productDetail.delete')}
+                      <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                        {t('productDetail.delete')}
+                      </span>
+                      <svg
+                        className="w-10 h-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h14"
+                        />
+                      </svg>
                     </button>
                   </div>
                 ) : (
-                  userId && (
+                  nickname && (
                     <Link
                       href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}`}
                       className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"

@@ -9,6 +9,13 @@
     "start": "cross-env NODE_ENV=production node server.js",
     "start:socket": "node socket-server.js",
     "lint": "next lint",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:db:setup": "powershell -ExecutionPolicy Bypass -File scripts/test-db-setup.ps1",
+    "test:db:reset": "node scripts/test-db-reset.js",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
@@ -33,6 +40,10 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.19.27",
@@ -43,9 +54,11 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.0.4",
+    "jsdom": "^27.4.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
   },
   "description": "Aplicació web per a intercanviar productes amb sistema de xat en temps real.",
   "main": "next.config.js",

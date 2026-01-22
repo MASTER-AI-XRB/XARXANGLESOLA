@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 // Forçar que aquesta ruta sigui dinàmica (no es pot pre-renderitzar)
 export const dynamic = 'force-dynamic'
@@ -12,7 +14,7 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token')
 
     if (!token) {
-      return NextResponse.json({ valid: false })
+      return apiOk({ valid: false })
     }
 
     // Buscar usuari amb el token vàlid
@@ -25,10 +27,10 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ valid: !!user })
+    return apiOk({ valid: !!user })
   } catch (error) {
-    console.error('Error verificant token:', error)
-    return NextResponse.json({ valid: false })
+    logError('Error verificant token:', error)
+    return apiOk({ valid: false })
   }
 }
 

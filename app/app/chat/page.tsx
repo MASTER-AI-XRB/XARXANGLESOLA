@@ -8,14 +8,13 @@ import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
 import { getSocketUrl } from '@/lib/socket'
+import { getStoredNickname, getStoredSocketToken } from '@/lib/client-session'
+import { logError, logInfo, logWarn } from '@/lib/client-logger'
 
 interface Message {
   id: string
   content: string
-  userId: string
   userNickname: string
-  roomId: string
-  isPrivate: boolean
   createdAt: string
 }
 
@@ -31,8 +30,7 @@ export default function ChatPage() {
   const [isOnlineUsersDrawerOpen, setIsOnlineUsersDrawerOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
-  const nickname = typeof window !== 'undefined' ? localStorage.getItem('nickname') : null
+  const nickname = getStoredNickname()
   const { t, locale } = useI18n()
   const { showInfo } = useNotifications()
   const router = useRouter()
@@ -81,56 +79,65 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    if (!userId || !nickname) return
+    if (!nickname) return
 
     const socketUrl = getSocketUrl()
 
     // Si no hi ha URL configurada i estem a producció, desactivar Socket.io
     if (!socketUrl) {
-      console.warn('⚠️ Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
-      console.warn('   Configura a Vercel: NEXT_PUBLIC_SOCKET_URL=https://xarxanglesola-production.up.railway.app')
+      logWarn('⚠️ Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
+      logWarn('   Configura a Vercel: NEXT_PUBLIC_SOCKET_URL=https://xarxanglesola-production.up.railway.app')
       setConnected(false)
       return
     }
     
-    console.log('  → URL final del socket:', socketUrl)
+    logInfo('  → URL final del socket:', socketUrl)
     
-    console.log('=== DIAGNÒSTIC DE CONNEXIÓ SOCKET.IO ===')
-    console.log('URL del socket:', socketUrl)
-    console.log('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
-    console.log('Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
-    console.log('Protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
-    console.log('Port:', typeof window !== 'undefined' ? window.location.port : 'N/A')
-    console.log('User Agent:', typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A')
-    console.log('URL completa:', typeof window !== 'undefined' ? window.location.href : 'N/A')
-    console.log('========================================')
+    logInfo('=== DIAGNÒSTIC DE CONNEXIÓ SOCKET.IO ===')
+    logInfo('URL del socket:', socketUrl)
+    logInfo('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
+    logInfo('Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
+    logInfo('Protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
+    logInfo('Port:', typeof window !== 'undefined' ? window.location.port : 'N/A')
+    logInfo('User Agent:', typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A')
+    logInfo('URL completa:', typeof window !== 'undefined' ? window.location.href : 'N/A')
+    logInfo('========================================')
     
     // Provar la connexió manualment abans de Socket.io (només en desenvolupament)
     if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
       const testUrl = `${socketUrl}/socket.io/?EIO=4&transport=polling`
-      console.log('🔍 Provant connexió HTTP a:', testUrl)
+      logInfo('🔍 Provant connexió HTTP a:', testUrl)
       
       fetch(testUrl, {
         method: 'GET',
         mode: 'cors',
       })
         .then(response => {
-          console.log('✅ Test de connexió HTTP exitós:', response.status, response.statusText)
-          console.log('Headers:', Object.fromEntries(response.headers.entries()))
+          logInfo('✅ Test de connexió HTTP exitós:', {
+            status: response.status,
+            statusText: response.statusText,
+          })
+          logInfo('Headers:', Object.fromEntries(response.headers.entries()))
         })
         .catch(error => {
-          console.error('❌ Test de connexió HTTP fallat:', error)
-          console.error('Error details:', {
+          logError('❌ Test de connexió HTTP fallat:', error)
+          logError('Error details:', {
             name: error.name,
             message: error.message,
             stack: error.stack
           })
-          console.error('URL intentada:', testUrl)
+          logError('URL intentada:', testUrl)
         })
     }
     
+    const socketToken = getStoredSocketToken()
+    if (!socketToken) {
+      logWarn('⚠️ Socket auth token absent. Torna a iniciar sessió.')
+      setConnected(false)
+      return
+    }
     const newSocket = io(socketUrl, {
-      query: { userId, nickname },
+      auth: { token: socketToken },
       transports: ['polling', 'websocket'], // Polling primer per millor compatibilitat
       reconnection: true,
       reconnectionAttempts: 10,
@@ -144,22 +151,22 @@ export default function ChatPage() {
     })
 
     newSocket.on('connect', () => {
-      console.log('Connectat a Socket.io')
+      logInfo('Connectat a Socket.io')
       setConnected(true)
       newSocket.emit('join-general')
     })
 
     newSocket.on('connect_error', (error: any) => {
-      console.error('❌ Error de connexió Socket.io:', error)
-      console.error('Detalls de l\'error:', {
+      logError('❌ Error de connexió Socket.io:', error)
+      logError('Detalls de l\'error:', {
         message: error.message,
         type: error.type,
         description: error.description,
         transport: error.transport,
         context: error.context
       })
-      console.error('URL intentada:', socketUrl)
-      console.error('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
+      logError('URL intentada:', socketUrl)
+      logError('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
       
       // Missatges d'ajuda específics segons l'error
       let causaProbable = 'Error desconegut - Revisa els logs del servidor'
@@ -195,21 +202,21 @@ export default function ChatPage() {
         ]
       }
       
-      console.error('Causa probable:', causaProbable)
+      logError('Causa probable:', causaProbable)
       if (solucions.length > 0) {
-        console.error('Solucions suggerides:')
-        solucions.forEach(sol => console.error('  ' + sol))
+        logError('Solucions suggerides:')
+        solucions.forEach(sol => logError('  ' + sol))
       }
       
       setConnected(false)
     })
 
     newSocket.on('reconnect_attempt', (attemptNumber: number) => {
-      console.log(`🔄 Intentant reconnexió (intent ${attemptNumber}/10)...`)
+      logInfo(`🔄 Intentant reconnexió (intent ${attemptNumber}/10)...`)
     })
 
     newSocket.on('reconnect', (attemptNumber: number) => {
-      console.log(`✅ Reconnexió exitosa després de ${attemptNumber} intents`)
+      logInfo(`✅ Reconnexió exitosa després de ${attemptNumber} intents`)
       setConnected(true)
       if (!activePrivateChat) {
         newSocket.emit('join-general')
@@ -217,26 +224,26 @@ export default function ChatPage() {
     })
 
     newSocket.on('reconnect_error', (error: any) => {
-      console.error('❌ Error en reconnexió:', error)
+      logError('❌ Error en reconnexió:', error)
     })
 
     newSocket.on('reconnect_failed', () => {
-      console.error('❌ Fallida la reconnexió després de tots els intents')
-      console.error('Verifica:')
-      console.error('  1. NEXT_PUBLIC_SOCKET_URL està ben configurada a Vercel?')
-      console.error('  2. NEXT_PUBLIC_ALLOWED_ORIGINS inclou la URL de Vercel a Railway?')
-      console.error('  3. El servidor Socket.IO a Railway està actiu?')
-      console.error('  4. La URL usa HTTPS si Railway ho requereix?')
+      logError('❌ Fallida la reconnexió després de tots els intents')
+      logError('Verifica:')
+      logError('  1. NEXT_PUBLIC_SOCKET_URL està ben configurada a Vercel?')
+      logError('  2. NEXT_PUBLIC_ALLOWED_ORIGINS inclou la URL de Vercel a Railway?')
+      logError('  3. El servidor Socket.IO a Railway està actiu?')
+      logError('  4. La URL usa HTTPS si Railway ho requereix?')
       setConnected(false)
     })
 
     newSocket.on('disconnect', () => {
-      console.log('Desconnectat de Socket.io')
+      logInfo('Desconnectat de Socket.io')
       setConnected(false)
     })
 
     newSocket.on('session-terminated', (data: { message?: string }) => {
-      console.log('Sessió terminada:', data.message)
+      logInfo('Sessió terminada:', data.message)
       showInfo(
         t('notifications.sessionTerminated') || 'Sessió tancada',
         data.message || t('notifications.sessionTerminatedMessage') || 'Una nova sessió s\'ha obert des d\'un altre dispositiu.',
@@ -247,7 +254,7 @@ export default function ChatPage() {
             onClick: () => {
               if (typeof window !== 'undefined') {
                 localStorage.removeItem('nickname')
-                localStorage.removeItem('userId')
+                  localStorage.removeItem('socketToken')
                 window.location.href = '/'
               }
             }
@@ -274,7 +281,7 @@ export default function ChatPage() {
     })
 
     newSocket.on('private-message', (message: Message) => {
-      const otherUserNickname = message.userId === userId 
+      const otherUserNickname = message.userNickname === nickname 
         ? activePrivateChat 
         : message.userNickname
       
@@ -327,7 +334,7 @@ export default function ChatPage() {
       setMessages(loadedMessages)
     })
 
-    newSocket.on('load-private-messages', (data: { userId: string; messages: Message[] }) => {
+    newSocket.on('load-private-messages', (data: { messages: Message[] }) => {
       if (activePrivateChat) {
         setOpenPrivateChats((prev) => {
           if (!prev.includes(activePrivateChat)) {
@@ -364,7 +371,7 @@ export default function ChatPage() {
     return () => {
       newSocket.close()
     }
-  }, [userId, nickname, activePrivateChat])
+  }, [nickname, activePrivateChat])
 
   useEffect(() => {
     scrollToBottom()
@@ -405,7 +412,7 @@ export default function ChatPage() {
   }
 
   const startPrivateChat = (targetNickname: string) => {
-    if (!socket || !userId) return
+    if (!socket) return
     setActivePrivateChat(targetNickname)
     setOpenPrivateChats((prev) => {
       if (!prev.includes(targetNickname)) {
@@ -529,31 +536,31 @@ export default function ChatPage() {
                       )}
                       <div
                         className={`flex ${
-                          message.userId === userId ? 'justify-end' : 'justify-start'
+                          message.userNickname === nickname ? 'justify-end' : 'justify-start'
                         }`}
                       >
                       <div
                         className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
-                          message.userId === userId
+                          message.userNickname === nickname
                             ? 'bg-blue-600 dark:bg-blue-700 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
                         }`}
                       >
                           {!activePrivateChat && (
                             <div className={`text-xs font-semibold mb-1 ${
-                              message.userId === userId ? 'opacity-90' : 'opacity-75'
+                              message.userNickname === nickname ? 'opacity-90' : 'opacity-75'
                             }`}>
                               {message.userNickname}
                             </div>
                           )}
-                          {activePrivateChat && message.userId !== userId && (
+                          {activePrivateChat && message.userNickname !== nickname && (
                             <div className="text-xs font-semibold mb-1 opacity-75">
                               {message.userNickname}
                             </div>
                           )}
                           <div><TranslateButton text={message.content} /></div>
                           <div className={`flex items-center justify-between mt-1 ${
-                            message.userId === userId ? 'opacity-90' : 'opacity-75'
+                            message.userNickname === nickname ? 'opacity-90' : 'opacity-75'
                           }`}>
                             <span className="text-xs">
                               {new Date(message.createdAt).toLocaleTimeString(
@@ -564,7 +571,7 @@ export default function ChatPage() {
                                 }
                               )}
                             </span>
-                            {!activePrivateChat && message.userId !== userId && (
+                            {!activePrivateChat && message.userNickname !== nickname && (
                               <button
                                 onClick={() => startPrivateChat(message.userNickname)}
                                 className="ml-2 p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"

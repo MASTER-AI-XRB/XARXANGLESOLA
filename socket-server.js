@@ -358,7 +358,7 @@ io.on('connection', (socket) => {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-notify-token')
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200)
@@ -367,6 +367,15 @@ io.on('connection', (socket) => {
     }
 
     if (req.method === 'POST' && req.url === '/notify') {
+      const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+      if (notifySecret) {
+        const requestToken = req.headers['x-notify-token']
+        if (requestToken !== notifySecret) {
+          res.writeHead(401, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: false, error: 'Unauthorized' }))
+          return
+        }
+      }
       let body = ''
       req.on('data', (chunk) => {
         body += chunk.toString()

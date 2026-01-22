@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useI18n } from '@/lib/i18n'
 import TranslateButton from '@/components/TranslateButton'
+import { getStoredNickname } from '@/lib/client-session'
+import { logError } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -13,7 +15,6 @@ interface Product {
   images: string[]
   reserved: boolean
   prestec: boolean
-  userId: string
   user: {
     nickname: string
   }
@@ -25,43 +26,41 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const router = useRouter()
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+  const nickname = getStoredNickname()
   const { t } = useI18n()
 
   useEffect(() => {
-    if (!userId) {
+    if (!nickname) {
       router.push('/')
       return
     }
     fetchFavorites()
-  }, [router, userId])
+  }, [router, nickname])
 
   const fetchFavorites = async () => {
-    if (!userId) return
     try {
-      const response = await fetch(`/api/favorites?userId=${userId}`)
+      const response = await fetch('/api/favorites')
       if (response.ok) {
         const data = await response.json()
         setProducts(data)
       }
     } catch (error) {
-      console.error('Error carregant preferits:', error)
+      logError('Error carregant preferits:', error)
     } finally {
       setLoading(false)
     }
   }
 
   const removeFavorite = async (productId: string) => {
-    if (!userId) return
     try {
       await fetch('/api/favorites', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, productId }),
+        body: JSON.stringify({ productId }),
       })
       setProducts(products.filter((p) => p.id !== productId))
     } catch (error) {
-      console.error('Error eliminant preferit:', error)
+      logError('Error eliminant preferit:', error)
     }
   }
 

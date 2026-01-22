@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUserId } from '@/lib/auth'
+import { validateUuid } from '@/lib/validation'
+import { apiOk } from '@/lib/api-response'
+import { logError } from '@/lib/logger'
 
 // Forçar que aquesta ruta sigui dinàmica (no es pot pre-renderitzar)
 export const dynamic = 'force-dynamic'
@@ -7,28 +11,30 @@ export const dynamic = 'force-dynamic'
 // Comprovar si un producte està als preferits de l'usuari
 export async function GET(request: NextRequest) {
   try {
-    const userId = new URL(request.url).searchParams.get('userId')
+    const authUserId = getAuthUserId(request)
     const productId = new URL(request.url).searchParams.get('productId')
 
-    if (!userId || !productId) {
-      return NextResponse.json({ isFavorite: false })
+    if (!authUserId || !productId) {
+      return apiOk({ isFavorite: false })
+    }
+    const productIdValidation = validateUuid(productId, 'producte')
+    if (!productIdValidation.valid) {
+      return apiOk({ isFavorite: false })
     }
 
     const favorite = await prisma.favorite.findUnique({
       where: {
         userId_productId: {
-          userId,
+          userId: authUserId,
           productId,
         },
       },
     })
 
-    const isFavorite = !!favorite
-    console.log(`Check favorite: userId=${userId}, productId=${productId}, isFavorite=${isFavorite}`)
-    return NextResponse.json({ isFavorite })
+    return apiOk({ isFavorite: !!favorite })
   } catch (error) {
-    console.error('Error comprovant preferit:', error)
-    return NextResponse.json({ isFavorite: false })
+    logError('Error comprovant preferit:', error)
+    return apiOk({ isFavorite: false })
   }
 }
 
