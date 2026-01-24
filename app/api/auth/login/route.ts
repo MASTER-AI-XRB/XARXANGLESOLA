@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const token = createSessionToken(user.id, user.nickname)
+    const token = createSessionToken(user.id, user.nickname ?? '')
     if (!token && process.env.NODE_ENV === 'production') {
       return apiError('AUTH_SECRET no configurat a producció', 500)
     }
