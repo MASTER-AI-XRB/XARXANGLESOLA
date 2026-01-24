@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn, useSession } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import { getStoredNickname, setStoredSession } from '@/lib/client-session'
 import LanguageSelector from '@/components/LanguageSelector'
@@ -28,6 +29,7 @@ export default function Home() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'expanding' | 'complete'>('idle')
   const router = useRouter()
+  const { data: session, status } = useSession()
   const { t } = useI18n()
 
   useEffect(() => {
@@ -35,8 +37,31 @@ export default function Home() {
     const savedNickname = getStoredNickname()
     if (savedNickname) {
       router.push('/app')
+      return
     }
-  }, [router])
+    if (status === 'loading') return
+    if (!session) return
+    if (session?.needsNickname) {
+      router.push('/app/complete-profile')
+      return
+    }
+    fetch('/api/auth/socket-token')
+      .then(async (response) => {
+        const data = await response.json()
+        if (!response.ok) {
+          return
+        }
+        if (data?.needsNickname) {
+          router.push('/app/complete-profile')
+          return
+        }
+        if (data?.nickname) {
+          setStoredSession(data.nickname, data.socketToken)
+          router.push('/app')
+        }
+      })
+      .catch(() => null)
+  }, [router, session, status])
 
   useEffect(() => {
     // Ajustar la mida del logo segons la mida de la pantalla
@@ -629,6 +654,23 @@ export default function Home() {
             className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
           >
             {isNewUser ? t('auth.register') : t('auth.enter')}
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {t('auth.or')}
+            </span>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+          </div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault()
+              signIn('google', { callbackUrl: '/app/complete-profile' })
+            }}
+            className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            {t('auth.continueWithGoogle')}
           </button>
         </form>
         </div>

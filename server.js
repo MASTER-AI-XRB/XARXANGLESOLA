@@ -177,7 +177,52 @@ app.prepare().then(() => {
     content: message.content,
     userNickname: message.user?.nickname || message.userNickname,
     createdAt: message.createdAt,
+    productId: message.productId || null,
   })
+
+  const buildPrivateRoomId = (userId, targetUserId, productId) => {
+    const baseRoom = [userId, targetUserId].sort().join('-')
+    return productId ? `${baseRoom}::${productId}` : baseRoom
+  }
+
+  const resolvePrivateTarget = async (payload) => {
+    if (!payload) return null
+
+    let targetIdentifier = payload
+    let productId = null
+
+    if (typeof payload === 'object') {
+      targetIdentifier =
+        payload.targetIdentifier || payload.targetNickname || payload.targetUserId || ''
+      productId = payload.productId || null
+    }
+
+    if (typeof targetIdentifier !== 'string') return null
+    const normalizedTarget = normalizeString(targetIdentifier, 50)
+    if (!normalizedTarget) return null
+
+    let targetUserId = normalizedTarget
+    if (!isUuid(normalizedTarget)) {
+      if (!isNickname(normalizedTarget)) return null
+      const targetUser = await prisma.user.findUnique({
+        where: { nickname: normalizedTarget },
+        select: { id: true },
+      })
+      if (!targetUser) return null
+      targetUserId = targetUser.id
+    }
+
+    if (productId) {
+      if (!isUuid(productId)) return null
+      const product = await prisma.product.findFirst({
+        where: { id: productId, userId: targetUserId },
+        select: { id: true },
+      })
+      if (!product) return null
+    }
+
+    return { targetUserId, productId: productId || null }
+  }
 
   const shouldSendNotification = async (targetUserId, payload) => {
     const preference = await prisma.notificationPreference.findUnique({
@@ -467,56 +512,41 @@ app.prepare().then(() => {
         ioInstance.to('general').emit('general-message', mapMessage(message))
       })
 
-      socket.on('join-private', async (targetIdentifier) => {
+      socket.on('join-private', async (payload) => {
         const user = socketUsers.get(socket.id)
         if (!user) return
 
-        if (typeof targetIdentifier !== 'string') return
-        const normalizedTarget = normalizeString(targetIdentifier, 50)
-        if (!normalizedTarget) return
+        const resolved = await resolvePrivateTarget(payload)
+        if (!resolved) return
 
-        let targetUserId = normalizedTarget
-        if (!isUuid(normalizedTarget)) {
-          if (!isNickname(normalizedTarget)) return
-          const targetUser = await prisma.user.findUnique({
-            where: { nickname: normalizedTarget },
-            select: { id: true },
-          })
-          if (!targetUser) return
-          targetUserId = targetUser.id
-        }
-
-        const roomId = [user.userId, targetUserId].sort().join('-')
+        const roomId = buildPrivateRoomId(
+          user.userId,
+          resolved.targetUserId,
+          resolved.productId
+        )
         socket.join(roomId)
       })
 
-      socket.on('load-private-messages', async (targetIdentifier) => {
+      socket.on('load-private-messages', async (payload) => {
         const user = socketUsers.get(socket.id)
         if (!user) return
 
-        if (typeof targetIdentifier !== 'string') return
-        const normalizedTarget = normalizeString(targetIdentifier, 50)
-        if (!normalizedTarget) return
+        const resolved = await resolvePrivateTarget(payload)
+        if (!resolved) return
 
-        let targetUserId = normalizedTarget
-        if (!isUuid(normalizedTarget)) {
-          if (!isNickname(normalizedTarget)) return
-          const targetUser = await prisma.user.findUnique({
-            where: { nickname: normalizedTarget },
-            select: { id: true },
-          })
-          if (!targetUser) return
-          targetUserId = targetUser.id
-        }
-
-        const roomId = [user.userId, targetUserId].sort().join('-')
+        const roomId = buildPrivateRoomId(
+          user.userId,
+          resolved.targetUserId,
+          resolved.productId
+        )
         const messages = await prisma.message.findMany({
           where: {
             OR: [
               { roomId, userId: user.userId },
-              { roomId, userId: targetUserId },
+              { roomId, userId: resolved.targetUserId },
             ],
             isPrivate: true,
+            productId: resolved.productId,
           },
           include: { user: { select: { nickname: true } } },
           orderBy: { createdAt: 'asc' },
@@ -524,6 +554,7 @@ app.prepare().then(() => {
 
         socket.emit('load-private-messages', {
           messages: messages.map(mapMessage),
+          productId: resolved.productId,
         })
       })
 
@@ -533,25 +564,24 @@ app.prepare().then(() => {
         const content = normalizeString(data.content, 1000)
         if (!content) return
 
-        const targetRaw = normalizeString(data.targetUserId || data.targetNickname || '', 50)
-        if (!targetRaw) return
+        const resolved = await resolvePrivateTarget(data)
+        if (!resolved) return
 
-        let targetUserId = targetRaw
-        if (!isUuid(targetRaw)) {
-          if (!isNickname(targetRaw)) return
-          const targetUser = await prisma.user.findUnique({
-            where: { nickname: targetRaw },
-            select: { id: true },
-          })
-          if (!targetUser) return
-          targetUserId = targetUser.id
-        }
-
-        const roomId = [user.userId, targetUserId].sort().join('-')
-        const targetSocketId = userSockets.get(targetUserId)
+        const roomId = buildPrivateRoomId(
+          user.userId,
+          resolved.targetUserId,
+          resolved.productId
+        )
+        const targetSocketId = userSockets.get(resolved.targetUserId)
 
         const message = await prisma.message.create({
-          data: { content, userId: user.userId, roomId, isPrivate: true },
+          data: {
+            content,
+            userId: user.userId,
+            roomId,
+            isPrivate: true,
+            productId: resolved.productId,
+          },
           include: { user: { select: { nickname: true } } },
         })
 

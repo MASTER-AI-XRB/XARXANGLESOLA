@@ -27,7 +27,9 @@
     "error": "Login error",
     "nicknameRequired": "Please enter a nickname",
     "nicknameMinLength": "Nickname must be at least 3 characters",
-    "connectionError": "Connection error. Please try again."
+    "connectionError": "Connection error. Please try again.",
+    "or": "or",
+    "continueWithGoogle": "Continue with Google"
   },
   "nav": {
     "products": "Products",
@@ -87,10 +89,13 @@
   },
   "chat": {
     "general": "💬 General Chat",
+    "generalDm": "General",
     "privateWith": "Chat with {nickname}",
     "noMessages": "No messages yet. Be the first to write!",
     "writeMessage": "Write a message...",
     "writePrivateMessage": "Write a private message...",
+    "selectProduct": "Select a product to start the chat.",
+    "noProductsForChat": "This user has no published products.",
     "connecting": "Connecting...",
     "onlineUsers": "Online users",
     "noOnlineUsers": "No other users online",

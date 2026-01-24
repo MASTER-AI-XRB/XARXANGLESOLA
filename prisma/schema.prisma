@@ -12,8 +12,11 @@ datasource db {
 
 model User {
   id               String    @id @default(uuid())
-  nickname         String    @unique
+  nickname         String?   @unique
   email            String?   @unique
+  name             String?
+  image            String?
+  emailVerified    DateTime?
   password         String?
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -24,6 +27,47 @@ model User {
   messages               Message[]
   favorites              Favorite[]
   notificationPreference NotificationPreference?
+  accounts               Account[]
+  sessions               Session[]
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Product {
@@ -39,6 +83,7 @@ model Product {
   updatedAt   DateTime @updatedAt
   
   favorites   Favorite[]
+  messages    Message[]
   
   @@index([userId])
   @@index([createdAt])
@@ -51,10 +96,13 @@ model Message {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   roomId    String   // "general" for general chat, or userId for private chat
   isPrivate Boolean  @default(false)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   
   @@index([roomId])
   @@index([userId])
+  @@index([productId])
   @@index([createdAt])
 }
 

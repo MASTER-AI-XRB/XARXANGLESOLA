@@ -27,7 +27,9 @@
     "error": "Error al iniciar sessió",
     "nicknameRequired": "Si us plau, introdueix un nickname",
     "nicknameMinLength": "El nickname ha de tenir almenys 3 caràcters",
-    "connectionError": "Error de connexió. Torna-ho a intentar."
+    "connectionError": "Error de connexió. Torna-ho a intentar.",
+    "or": "o",
+    "continueWithGoogle": "Continua amb Google"
   },
   "nav": {
     "products": "Productes",
@@ -87,10 +89,13 @@
   },
   "chat": {
     "general": "💬 Xat General",
+    "generalDm": "General",
     "privateWith": "Xat amb {nickname}",
     "noMessages": "No hi ha missatges encara. Sigues el primer a escriure!",
     "writeMessage": "Escriu un missatge...",
     "writePrivateMessage": "Escriu un missatge privat...",
+    "selectProduct": "Selecciona un producte per començar el xat.",
+    "noProductsForChat": "Aquest usuari no té productes publicats.",
     "connecting": "Connectant...",
     "onlineUsers": "Usuaris en línia",
     "noOnlineUsers": "No hi ha altres usuaris en línia",

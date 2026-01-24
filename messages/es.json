@@ -27,7 +27,9 @@
     "error": "Error al iniciar sesión",
     "nicknameRequired": "Por favor, introduce un nickname",
     "nicknameMinLength": "El nickname debe tener al menos 3 caracteres",
-    "connectionError": "Error de conexión. Vuelve a intentarlo."
+    "connectionError": "Error de conexión. Vuelve a intentarlo.",
+    "or": "o",
+    "continueWithGoogle": "Continuar con Google"
   },
   "nav": {
     "products": "Productos",
@@ -87,10 +89,13 @@
   },
   "chat": {
     "general": "💬 Chat General",
+    "generalDm": "General",
     "privateWith": "Chat con {nickname}",
     "noMessages": "No hay mensajes todavía. ¡Sé el primero en escribir!",
     "writeMessage": "Escribe un mensaje...",
     "writePrivateMessage": "Escribe un mensaje privado...",
+    "selectProduct": "Selecciona un producto para empezar el chat.",
+    "noProductsForChat": "Este usuario no tiene productos publicados.",
     "connecting": "Conectando...",
     "onlineUsers": "Usuarios en línea",
     "noOnlineUsers": "No hay otros usuarios en línea",

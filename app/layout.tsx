@@ -4,6 +4,7 @@ import './globals.css'
 import { I18nProvider } from '@/lib/i18n'
 import { ThemeProvider } from '@/lib/theme'
 import { NotificationProvider } from '@/lib/notifications'
+import AuthProvider from '@/components/AuthProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -28,7 +29,7 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <NotificationProvider>
-              {children}
+              <AuthProvider>{children}</AuthProvider>
             </NotificationProvider>
           </I18nProvider>
         </ThemeProvider>

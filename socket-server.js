@@ -10,6 +10,62 @@ const { PrismaClient } = require('@prisma/client')
 const port = process.env.PORT || 3001
 const prisma = new PrismaClient()
 
+const normalizeString = (value, maxLength) => {
+  if (typeof value !== 'string') return ''
+  return value.trim().slice(0, maxLength)
+}
+
+const isUuid = (value) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value || ''
+  )
+
+const isNickname = (value) => /^[a-zA-Z0-9_-]{3,20}$/.test(value || '')
+
+const buildPrivateRoomId = (userId, targetUserId, productId) => {
+  const baseRoom = [userId, targetUserId].sort().join('-')
+  return productId ? `${baseRoom}::${productId}` : baseRoom
+}
+
+const resolvePrivateTarget = async (payload) => {
+  if (!payload) return null
+
+  let targetIdentifier = payload
+  let productId = null
+
+  if (typeof payload === 'object') {
+    targetIdentifier =
+      payload.targetIdentifier || payload.targetNickname || payload.targetUserId || ''
+    productId = payload.productId || null
+  }
+
+  if (typeof targetIdentifier !== 'string') return null
+  const normalizedTarget = normalizeString(targetIdentifier, 50)
+  if (!normalizedTarget) return null
+
+  let targetUserId = normalizedTarget
+  if (!isUuid(normalizedTarget)) {
+    if (!isNickname(normalizedTarget)) return null
+    const targetUser = await prisma.user.findUnique({
+      where: { nickname: normalizedTarget },
+      select: { id: true },
+    })
+    if (!targetUser) return null
+    targetUserId = targetUser.id
+  }
+
+  if (productId) {
+    if (!isUuid(productId)) return null
+    const product = await prisma.product.findFirst({
+      where: { id: productId, userId: targetUserId },
+      select: { id: true },
+    })
+    if (!product) return null
+  }
+
+  return { targetUserId, productId: productId || null }
+}
+
 // Configurar orígens permesos per CORS
 const getAllowedOrigins = () => {
   if (process.env.NEXT_PUBLIC_ALLOWED_ORIGINS) {
@@ -168,26 +224,19 @@ io.on('connection', (socket) => {
   })
 
   // Unir-se a xat privat (accepta nickname o userId)
-  socket.on('join-private', async (targetIdentifier) => {
+  socket.on('join-private', async (payload) => {
     const user = socketUsers.get(socket.id)
     if (!user) return
 
     try {
-      let targetUserId = targetIdentifier
-      // Si és un nickname, buscar l'userId
-      if (!targetIdentifier.includes('-')) {
-        const targetUser = await prisma.user.findUnique({
-          where: { nickname: targetIdentifier },
-          select: { id: true },
-        })
-        if (targetUser) {
-          targetUserId = targetUser.id
-        } else {
-          return
-        }
-      }
+      const resolved = await resolvePrivateTarget(payload)
+      if (!resolved) return
 
-      const roomId = [user.userId, targetUserId].sort().join('-')
+      const roomId = buildPrivateRoomId(
+        user.userId,
+        resolved.targetUserId,
+        resolved.productId
+      )
       socket.join(roomId)
     } catch (error) {
       console.error('Error unint-se a xat privat:', error)
@@ -195,33 +244,27 @@ io.on('connection', (socket) => {
   })
 
   // Carregar missatges privats (accepta nickname o userId)
-  socket.on('load-private-messages', async (targetIdentifier) => {
+  socket.on('load-private-messages', async (payload) => {
     const user = socketUsers.get(socket.id)
     if (!user) return
 
     try {
-      let targetUserId = targetIdentifier
-      // Si és un nickname, buscar l'userId
-      if (!targetIdentifier.includes('-')) {
-        const targetUser = await prisma.user.findUnique({
-          where: { nickname: targetIdentifier },
-          select: { id: true },
-        })
-        if (targetUser) {
-          targetUserId = targetUser.id
-        } else {
-          return
-        }
-      }
+      const resolved = await resolvePrivateTarget(payload)
+      if (!resolved) return
 
-      const roomId = [user.userId, targetUserId].sort().join('-')
+      const roomId = buildPrivateRoomId(
+        user.userId,
+        resolved.targetUserId,
+        resolved.productId
+      )
       const messages = await prisma.message.findMany({
         where: {
           OR: [
             { roomId: roomId, userId: user.userId },
-            { roomId: roomId, userId: targetUserId },
+            { roomId: roomId, userId: resolved.targetUserId },
           ],
           isPrivate: true,
+          productId: resolved.productId,
         },
         include: {
           user: {
@@ -236,10 +279,12 @@ io.on('connection', (socket) => {
       })
 
       socket.emit('load-private-messages', {
-        userId: targetUserId,
+        userId: resolved.targetUserId,
+        productId: resolved.productId,
         messages: messages.map((m) => ({
           ...m,
           userNickname: m.user.nickname,
+          productId: m.productId || null,
         })),
       })
     } catch (error) {
@@ -258,22 +303,15 @@ io.on('connection', (socket) => {
     if (content.length === 0 || content.length > 1000) return
 
     try {
-      let targetUserId = data.targetUserId || data.targetNickname
-      // Si és un nickname, buscar l'userId
-      if (data.targetNickname && !targetUserId.includes('-')) {
-        const targetUser = await prisma.user.findUnique({
-          where: { nickname: data.targetNickname },
-          select: { id: true },
-        })
-        if (targetUser) {
-          targetUserId = targetUser.id
-        } else {
-          return
-        }
-      }
+      const resolved = await resolvePrivateTarget(data)
+      if (!resolved) return
 
-      const roomId = [user.userId, targetUserId].sort().join('-')
-      const targetSocketId = userSockets.get(targetUserId)
+      const roomId = buildPrivateRoomId(
+        user.userId,
+        resolved.targetUserId,
+        resolved.productId
+      )
+      const targetSocketId = userSockets.get(resolved.targetUserId)
 
       const message = await prisma.message.create({
         data: {
@@ -281,6 +319,7 @@ io.on('connection', (socket) => {
           userId: user.userId,
           roomId: roomId,
           isPrivate: true,
+          productId: resolved.productId,
         },
         include: {
           user: {
@@ -294,6 +333,7 @@ io.on('connection', (socket) => {
       const messageData = {
         ...message,
         userNickname: message.user.nickname,
+        productId: message.productId || null,
       }
 
       // Enviar al remitent

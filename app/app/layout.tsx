@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { signOut, useSession } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
 import NotificationSettings from '@/components/NotificationSettings'
-import { clearStoredSession, getStoredNickname } from '@/lib/client-session'
+import { clearStoredSession, getStoredNickname, setStoredSession } from '@/lib/client-session'
 import DevConsole from '@/components/DevConsole'
 
 export default function AppLayout({
@@ -19,24 +20,62 @@ export default function AppLayout({
   const [nickname, setNickname] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+  const { data: session, status } = useSession()
   const { t } = useI18n()
 
   useEffect(() => {
     const savedNickname = getStoredNickname()
     if (!savedNickname) {
-      router.push('/')
+      if (pathname === '/app/complete-profile') {
+        return
+      }
+      if (status === 'loading') {
+        return
+      }
+      if (!session) {
+        router.push('/')
+        return
+      }
+      fetch('/api/auth/socket-token')
+        .then(async (response) => {
+          const data = await response.json()
+          if (!response.ok) {
+            router.push('/')
+            return
+          }
+          if (data?.needsNickname) {
+            router.push('/app/complete-profile')
+            return
+          }
+          if (data?.nickname) {
+            setStoredSession(data.nickname, data.socketToken)
+            setNickname(data.nickname)
+            return
+          }
+          router.push('/')
+        })
+        .catch(() => {
+          router.push('/')
+        })
       return
     }
     setNickname(savedNickname)
-  }, [router])
+  }, [router, pathname, session, status])
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
     clearStoredSession()
+    if (session) {
+      signOut({ redirect: false }).catch(() => null)
+    }
     router.push('/')
   }
 
   if (!nickname) {
+    if (pathname === '/app/complete-profile') {
+      return <main>{children}</main>
+    }
     return null
   }
 
@@ -88,6 +127,12 @@ export default function AppLayout({
                   className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium"
                 >
                   {t('nav.chat')}
+                </Link>
+                <Link
+                  href="/app/configuracio"
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  {t('nav.settings')}
                 </Link>
               </div>
             </div>
@@ -149,6 +194,13 @@ export default function AppLayout({
                   className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium"
                 >
                   {t('nav.chat')}
+                </Link>
+                <Link
+                  href="/app/configuracio"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  {t('nav.settings')}
                 </Link>
                 <div className="px-3 py-2">
                   <NotificationSettings />

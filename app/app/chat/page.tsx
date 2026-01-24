@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
@@ -16,6 +17,13 @@ interface Message {
   content: string
   userNickname: string
   createdAt: string
+  productId?: string | null
+}
+
+interface ProductSummary {
+  id: string
+  name: string
+  images: string[]
 }
 
 export default function ChatPage() {
@@ -25,17 +33,61 @@ export default function ChatPage() {
   const [connected, setConnected] = useState(false)
   const [privateChats, setPrivateChats] = useState<{ [key: string]: Message[] }>({})
   const [activePrivateChat, setActivePrivateChat] = useState<string | null>(null)
+  const [activePrivateTab, setActivePrivateTab] = useState<string | null>(null)
   const [openPrivateChats, setOpenPrivateChats] = useState<string[]>([])
   const [unreadPrivateChats, setUnreadPrivateChats] = useState<Record<string, number>>({})
+  const [privateChatProducts, setPrivateChatProducts] = useState<Record<string, ProductSummary[]>>(
+    {}
+  )
+  const [privateChatProductsFetched, setPrivateChatProductsFetched] = useState<
+    Record<string, boolean>
+  >({})
+  const [loadingPrivateProducts, setLoadingPrivateProducts] = useState<Record<string, boolean>>({})
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [isOnlineUsersDrawerOpen, setIsOnlineUsersDrawerOpen] = useState(false)
   const [hasRestoredChats, setHasRestoredChats] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const activePrivateProductIdRef = useRef<string | null>(null)
+  const privateChatProductsRef = useRef(privateChatProducts)
+  const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
+  const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
   
   const nickname = getStoredNickname()
   const { t, locale } = useI18n()
   const { showInfo } = useNotifications()
   const router = useRouter()
+
+  const resolveActiveProductId = (tab: string | null) => {
+    if (tab === null) return null
+    return tab === 'general' ? null : tab
+  }
+
+  useEffect(() => {
+    activePrivateProductIdRef.current = resolveActiveProductId(activePrivateTab)
+  }, [activePrivateTab])
+
+  useEffect(() => {
+    privateChatProductsRef.current = privateChatProducts
+  }, [privateChatProducts])
+
+  useEffect(() => {
+    privateChatProductsFetchedRef.current = privateChatProductsFetched
+  }, [privateChatProductsFetched])
+
+  useEffect(() => {
+    loadingPrivateProductsRef.current = loadingPrivateProducts
+  }, [loadingPrivateProducts])
+
+  const buildPrivateChatKey = (chatNickname: string, productId: string | null) =>
+    `${chatNickname}::${productId || 'general'}`
+
+  const hasUnreadForUser = (chatNickname: string) =>
+    Object.entries(unreadPrivateChats).some(
+      ([key, count]) => key.startsWith(`${chatNickname}::`) && count > 0
+    )
+
+  const getUnreadForProduct = (chatNickname: string, productId: string | null) =>
+    unreadPrivateChats[buildPrivateChatKey(chatNickname, productId)] || 0
 
   useEffect(() => {
     if (!nickname || typeof window === 'undefined') return
@@ -44,6 +96,7 @@ export default function ChatPage() {
 
     const openChatsKey = `chat:${nickname}:openPrivateChats`
     const activeChatKey = `chat:${nickname}:activePrivateChat`
+    const activeProductKey = `chat:${nickname}:activePrivateProduct`
 
     const storedOpen = window.localStorage.getItem(openChatsKey)
     if (storedOpen) {
@@ -65,14 +118,134 @@ export default function ChatPage() {
       )
     }
 
+    const storedActiveProduct = window.localStorage.getItem(activeProductKey)
+    if (storedActiveProduct) {
+      setActivePrivateTab(storedActiveProduct)
+    }
+
     setHasRestoredChats(true)
   }, [nickname])
+
+  useEffect(() => {
+    if (!activePrivateChat) {
+      setActivePrivateTab(null)
+      return
+    }
+
+    const cachedProducts = privateChatProductsRef.current[activePrivateChat]
+    const alreadyFetched = privateChatProductsFetchedRef.current[activePrivateChat]
+    if (cachedProducts && alreadyFetched) {
+      setLoadingPrivateProducts((prev) => ({ ...prev, [activePrivateChat]: false }))
+      if (activePrivateTab === null) {
+        setActivePrivateTab('general')
+        return
+      }
+      if (activePrivateTab !== 'general') {
+        const hasActiveProduct = cachedProducts.some(
+          (product) => product.id === activePrivateTab
+        )
+        if (!hasActiveProduct) {
+          setActivePrivateTab('general')
+        }
+      }
+      return
+    }
+
+    if (loadingPrivateProductsRef.current[activePrivateChat]) return
+
+    let isCancelled = false
+    setLoadingPrivateProducts((prev) => ({ ...prev, [activePrivateChat]: true }))
+
+    const fetchProductsForUser = async (): Promise<ProductSummary[]> => {
+      const userResponse = await fetch(
+        `/api/users/${encodeURIComponent(activePrivateChat)}/products`,
+        { cache: 'no-store' }
+      )
+      if (userResponse.ok) {
+        const data = await userResponse.json()
+        if (Array.isArray(data)) {
+          logInfo('Productes del DM carregats', {
+            nickname: activePrivateChat,
+            count: data.length,
+          })
+          return data
+        }
+        logWarn('Resposta inesperada de productes del DM', data)
+      } else {
+        logWarn('Error carregant productes del DM', {
+          nickname: activePrivateChat,
+          status: userResponse.status,
+        })
+      }
+
+      const fallbackResponse = await fetch('/api/products', { cache: 'no-store' })
+      if (!fallbackResponse.ok) {
+        logWarn('Error carregant productes (fallback)', {
+          status: fallbackResponse.status,
+        })
+        return []
+      }
+      const fallbackData = await fallbackResponse.json()
+      if (!Array.isArray(fallbackData)) {
+        logWarn('Resposta inesperada de productes (fallback)', fallbackData)
+        return []
+      }
+      const targetNickname = activePrivateChat.toLowerCase()
+      return fallbackData.filter(
+        (product: ProductSummary & { user?: { nickname?: string } }) =>
+          product.user?.nickname?.toLowerCase() === targetNickname
+      )
+    }
+
+    fetchProductsForUser()
+      .then((products) => {
+        if (isCancelled) return
+        setPrivateChatProducts((prev) => ({
+          ...prev,
+          [activePrivateChat]: Array.isArray(products) ? products : [],
+        }))
+        setPrivateChatProductsFetched((prev) => ({
+          ...prev,
+          [activePrivateChat]: true,
+        }))
+        if (activePrivateTab === null) {
+          setActivePrivateTab('general')
+          return
+        }
+        if (activePrivateTab !== 'general') {
+          const hasActiveProduct = Array.isArray(products)
+            && products.some((product) => product.id === activePrivateTab)
+          if (!hasActiveProduct) {
+            setActivePrivateTab('general')
+          }
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setPrivateChatProducts((prev) => ({ ...prev, [activePrivateChat]: [] }))
+          setActivePrivateTab('general')
+          setPrivateChatProductsFetched((prev) => ({
+            ...prev,
+            [activePrivateChat]: true,
+          }))
+        }
+      })
+      .finally(() => {
+        setLoadingPrivateProducts((prev) => ({ ...prev, [activePrivateChat]: false }))
+      })
+
+    return () => {
+      isCancelled = true
+      setLoadingPrivateProducts((prev) => ({ ...prev, [activePrivateChat]: false }))
+    }
+  }, [activePrivateChat, activePrivateTab])
 
   useEffect(() => {
     if (!nickname || typeof window === 'undefined' || !hasRestoredChats) return
 
     const openChatsKey = `chat:${nickname}:openPrivateChats`
     const activeChatKey = `chat:${nickname}:activePrivateChat`
+    const activeProductKey = `chat:${nickname}:activePrivateProduct`
 
     window.localStorage.setItem(openChatsKey, JSON.stringify(openPrivateChats))
     if (activePrivateChat) {
@@ -80,7 +253,13 @@ export default function ChatPage() {
     } else {
       window.localStorage.removeItem(activeChatKey)
     }
-  }, [nickname, openPrivateChats, activePrivateChat, hasRestoredChats])
+
+    if (activePrivateTab) {
+      window.localStorage.setItem(activeProductKey, activePrivateTab)
+    } else {
+      window.localStorage.removeItem(activeProductKey)
+    }
+  }, [nickname, openPrivateChats, activePrivateChat, activePrivateTab, hasRestoredChats])
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
@@ -331,8 +510,10 @@ export default function ChatPage() {
       const otherUserNickname = message.userNickname === nickname 
         ? activePrivateChat 
         : message.userNickname
+      const messageProductId = message.productId ?? activePrivateProductIdRef.current ?? null
       
       if (otherUserNickname) {
+        const chatKey = buildPrivateChatKey(otherUserNickname, messageProductId)
         setOpenPrivateChats((prev) => {
           if (!prev.includes(otherUserNickname)) {
             return [...prev, otherUserNickname]
@@ -342,14 +523,17 @@ export default function ChatPage() {
         
         setPrivateChats((prev) => ({
           ...prev,
-          [otherUserNickname]: [...(prev[otherUserNickname] || []), message],
+          [chatKey]: [...(prev[chatKey] || []), message],
         }))
-        if (activePrivateChat === otherUserNickname) {
+        if (
+          activePrivateChat === otherUserNickname &&
+          activePrivateProductIdRef.current === messageProductId
+        ) {
           scrollToBottom()
         } else {
           setUnreadPrivateChats((prev) => ({
             ...prev,
-            [otherUserNickname]: (prev[otherUserNickname] || 0) + 1,
+            [chatKey]: (prev[chatKey] || 0) + 1,
           }))
           // Notificació si no estàs al xat privat actiu o no estàs a la pàgina de xat
           if (typeof window !== 'undefined' && 
@@ -385,8 +569,10 @@ export default function ChatPage() {
       setMessages(loadedMessages)
     })
 
-    newSocket.on('load-private-messages', (data: { messages: Message[] }) => {
+    newSocket.on('load-private-messages', (data: { messages: Message[]; productId?: string | null }) => {
       if (activePrivateChat) {
+        const productIdFromData = data.productId ?? activePrivateProductIdRef.current ?? null
+        const chatKey = buildPrivateChatKey(activePrivateChat, productIdFromData)
         setOpenPrivateChats((prev) => {
           if (!prev.includes(activePrivateChat)) {
             return [...prev, activePrivateChat]
@@ -396,7 +582,7 @@ export default function ChatPage() {
         
         setPrivateChats((prev) => ({
           ...prev,
-          [activePrivateChat]: data.messages,
+          [chatKey]: data.messages,
         }))
       }
     })
@@ -408,14 +594,13 @@ export default function ChatPage() {
     if (targetNickname) {
       setTimeout(() => {
         setActivePrivateChat(targetNickname)
+        setActivePrivateTab('general')
         setOpenPrivateChats((prev) => {
           if (!prev.includes(targetNickname)) {
             return [...prev, targetNickname]
           }
           return prev
         })
-        newSocket.emit('join-private', targetNickname)
-        newSocket.emit('load-private-messages', targetNickname)
       }, 100)
     }
 
@@ -426,24 +611,29 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, privateChats, activePrivateChat])
+  }, [messages, privateChats, activePrivateChat, activePrivateTab])
 
   useEffect(() => {
     if (!hasRestoredChats) return
     if (activePrivateChat && !openPrivateChats.includes(activePrivateChat)) {
       setActivePrivateChat(null)
+      setActivePrivateTab(null)
     }
   }, [activePrivateChat, openPrivateChats, hasRestoredChats])
 
   useEffect(() => {
     if (!activePrivateChat) return
     setUnreadPrivateChats((prev) => {
-      if (!prev[activePrivateChat]) return prev
+      const chatKey = buildPrivateChatKey(
+        activePrivateChat,
+        resolveActiveProductId(activePrivateTab)
+      )
+      if (!prev[chatKey]) return prev
       const next = { ...prev }
-      delete next[activePrivateChat]
+      delete next[chatKey]
       return next
     })
-  }, [activePrivateChat])
+  }, [activePrivateChat, activePrivateTab])
 
   useEffect(() => {
     if (!activePrivateChat && socket && connected) {
@@ -453,33 +643,48 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!socket || !connected) return
+    if (!activePrivateChat || activePrivateTab === null) return
 
-    openPrivateChats.forEach((chatNickname) => {
-      socket.emit('join-private', chatNickname)
-      socket.emit('load-private-messages', chatNickname)
+    socket.emit('join-private', {
+      targetNickname: activePrivateChat,
+      productId: resolveActiveProductId(activePrivateTab),
     })
-  }, [socket, connected, openPrivateChats])
+    socket.emit('load-private-messages', {
+      targetNickname: activePrivateChat,
+      productId: resolveActiveProductId(activePrivateTab),
+    })
+  }, [socket, connected, activePrivateChat, activePrivateTab])
 
   // Gestió de reconnexió quan el socket es reconecta
   useEffect(() => {
-    if (socket && connected) {
-      if (activePrivateChat) {
-        socket.emit('join-private', activePrivateChat)
-        socket.emit('load-private-messages', activePrivateChat)
-      } else {
-        socket.emit('join-general')
-      }
+    if (!socket || !connected) return
+    if (activePrivateChat && activePrivateTab !== null) {
+      socket.emit('join-private', {
+        targetNickname: activePrivateChat,
+        productId: resolveActiveProductId(activePrivateTab),
+      })
+      socket.emit('load-private-messages', {
+        targetNickname: activePrivateChat,
+        productId: resolveActiveProductId(activePrivateTab),
+      })
+      return
     }
-  }, [socket, connected, activePrivateChat])
+
+    if (!activePrivateChat) {
+      socket.emit('join-general')
+    }
+  }, [socket, connected, activePrivateChat, activePrivateTab])
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !socket || !connected) return
 
     if (activePrivateChat) {
+      if (activePrivateTab === null) return
       socket.emit('private-message', {
         content: newMessage,
         targetNickname: activePrivateChat,
+        productId: resolveActiveProductId(activePrivateTab),
       })
     } else {
       socket.emit('general-message', { content: newMessage })
@@ -491,6 +696,7 @@ export default function ChatPage() {
   const startPrivateChat = (targetNickname: string) => {
     if (!socket) return
     setActivePrivateChat(targetNickname)
+    setActivePrivateTab('general')
     setOpenPrivateChats((prev) => {
       if (!prev.includes(targetNickname)) {
         return [...prev, targetNickname]
@@ -498,31 +704,48 @@ export default function ChatPage() {
       return prev
     })
     setUnreadPrivateChats((prev) => {
-      if (!prev[targetNickname]) return prev
       const next = { ...prev }
-      delete next[targetNickname]
+      Object.keys(next).forEach((key) => {
+        if (key.startsWith(`${targetNickname}::`)) {
+          delete next[key]
+        }
+      })
       return next
     })
-    socket.emit('join-private', targetNickname)
-    socket.emit('load-private-messages', targetNickname)
+    socket.emit('join-private', {
+      targetNickname,
+      productId: null,
+    })
+    socket.emit('load-private-messages', {
+      targetNickname,
+      productId: null,
+    })
   }
 
   const closePrivateChat = (targetNickname: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setOpenPrivateChats((prev) => prev.filter((nick) => nick !== targetNickname))
     setUnreadPrivateChats((prev) => {
-      if (!prev[targetNickname]) return prev
       const next = { ...prev }
-      delete next[targetNickname]
+      Object.keys(next).forEach((key) => {
+        if (key.startsWith(`${targetNickname}::`)) {
+          delete next[key]
+        }
+      })
       return next
     })
     if (activePrivateChat === targetNickname) {
       setActivePrivateChat(null)
+      setActivePrivateTab(null)
     }
   }
 
   const currentMessages = activePrivateChat
-    ? privateChats[activePrivateChat] || []
+    ? activePrivateTab !== null
+      ? privateChats[
+          buildPrivateChatKey(activePrivateChat, resolveActiveProductId(activePrivateTab))
+        ] || []
+      : []
     : messages
 
   // Detectar si estem a producció (Vercel) i si Socket.IO està configurat
@@ -531,6 +754,13 @@ export default function ChatPage() {
                         window.location.hostname.includes('vercel.com'))
   const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
   const showSocketWarning = isProduction && !socketUrl && !connected
+  const activePrivateProducts = activePrivateChat
+    ? privateChatProducts[activePrivateChat] || []
+    : []
+  const isPrivateProductsLoading = activePrivateChat
+    ? !!loadingPrivateProducts[activePrivateChat]
+    : false
+  const canSendMessage = connected && (!activePrivateChat || activePrivateTab !== null)
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
@@ -549,6 +779,7 @@ export default function ChatPage() {
               e.preventDefault()
               e.stopPropagation()
               setActivePrivateChat(null)
+              setActivePrivateTab(null)
               if (socket && connected) {
                 socket.emit('join-general')
               }
@@ -567,11 +798,9 @@ export default function ChatPage() {
               key={chatNickname}
               onClick={() => {
                 setActivePrivateChat(chatNickname)
+                setActivePrivateTab('general')
                 setUnreadPrivateChats((prev) => {
-                  if (!prev[chatNickname]) return prev
-                  const next = { ...prev }
-                  delete next[chatNickname]
-                  return next
+                  return prev
                 })
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-t-lg whitespace-nowrap transition relative group ${
@@ -580,7 +809,7 @@ export default function ChatPage() {
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              {unreadPrivateChats[chatNickname] ? (
+              {hasUnreadForUser(chatNickname) ? (
                 <span className="absolute -top-1 -right-[0.125rem] h-3 w-3 rounded-full bg-red-500 z-10 ring-2 ring-white dark:ring-gray-800" />
               ) : null}
               <span>{t('chat.privateWith', { nickname: chatNickname })}</span>
@@ -616,10 +845,93 @@ export default function ChatPage() {
 
         </div>
 
+        {activePrivateChat && (
+          <div className="border-b dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 flex items-center gap-2 overflow-x-auto flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setActivePrivateTab('general')
+                setUnreadPrivateChats((prev) => {
+                  const chatKey = buildPrivateChatKey(activePrivateChat, null)
+                  if (!prev[chatKey]) return prev
+                  const next = { ...prev }
+                  delete next[chatKey]
+                  return next
+                })
+              }}
+              className={`relative flex items-center gap-2 px-3 py-2 rounded-md whitespace-nowrap transition ${
+                activePrivateTab === 'general'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <span className="text-xs sm:text-sm font-medium">
+                {activePrivateChat || t('chat.generalDm') || 'General'}
+              </span>
+              {getUnreadForProduct(activePrivateChat, null) > 0 && (
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+              )}
+            </button>
+
+            {isPrivateProductsLoading && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {t('common.loading') || 'Carregant...'}
+              </span>
+            )}
+            {!isPrivateProductsLoading &&
+              activePrivateProducts.map((product) => {
+                const isActive = activePrivateTab === product.id
+                const unreadCount = getUnreadForProduct(activePrivateChat, product.id)
+                const thumbnail = product.images?.[0] || '/logo.png'
+
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      setActivePrivateTab(product.id)
+                      setUnreadPrivateChats((prev) => {
+                        const chatKey = buildPrivateChatKey(activePrivateChat, product.id)
+                        if (!prev[chatKey]) return prev
+                        const next = { ...prev }
+                        delete next[chatKey]
+                        return next
+                      })
+                    }}
+                    className={`relative flex items-center gap-2 px-3 py-2 rounded-md whitespace-nowrap transition ${
+                      isActive
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <Image
+                      src={thumbnail}
+                      alt={product.name}
+                      width={24}
+                      height={24}
+                      unoptimized
+                      className="h-6 w-6 rounded object-cover"
+                    />
+                    <span className="text-xs sm:text-sm font-medium">
+                      {product.name}
+                    </span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+                    )}
+                  </button>
+                )
+              })}
+          </div>
+        )}
+
         <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
-              {currentMessages.length === 0 ? (
+              {activePrivateChat && activePrivateTab === null ? (
+                <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
+                  {t('chat.selectProduct') || 'Selecciona un producte per començar el xat.'}
+                </div>
+              ) : currentMessages.length === 0 ? (
                 <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                   {t('chat.noMessages')}
                 </div>
@@ -718,15 +1030,17 @@ export default function ChatPage() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder={
                     activePrivateChat
-                      ? t('chat.writePrivateMessage')
+                      ? (activePrivateTab !== null
+                        ? t('chat.writePrivateMessage')
+                        : t('chat.selectProduct'))
                       : t('chat.writeMessage')
                   }
                   className="flex-1 px-2 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={!connected}
+                  disabled={!canSendMessage}
                 />
                 <button
                   type="submit"
-                  disabled={!connected || !newMessage.trim()}
+                  disabled={!canSendMessage || !newMessage.trim()}
                   className="bg-blue-600 dark:bg-blue-700 text-white px-3 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 text-sm sm:text-base"
                 >
                   {t('chat.send')}
