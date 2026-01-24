@@ -29,7 +29,8 @@ export default function Home() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'expanding' | 'complete'>('idle')
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const sessionHook = useSession()
+  const { data: session, status } = sessionHook ?? { data: null, status: 'loading' as const }
   const { t } = useI18n()
 
   useEffect(() => {

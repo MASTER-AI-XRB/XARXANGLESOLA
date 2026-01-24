@@ -5,6 +5,8 @@ import { createSessionToken } from '@/lib/auth'
 import { apiError, apiOk } from '@/lib/api-response'
 import { logError } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)

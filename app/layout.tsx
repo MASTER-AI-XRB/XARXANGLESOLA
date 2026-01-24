@@ -8,6 +8,8 @@ import AuthProvider from '@/components/AuthProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Xarxa Anglesola - Intercanvi de Productes',
   description: 'Plataforma per a intercanviar productes',

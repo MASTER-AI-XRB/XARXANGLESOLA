@@ -21,7 +21,8 @@ export default function AppLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const sessionHook = useSession()
+  const { data: session, status } = sessionHook ?? { data: null, status: 'loading' as const }
   const { t } = useI18n()
 
   useEffect(() => {

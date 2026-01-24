@@ -6,7 +6,8 @@ import { useSession } from 'next-auth/react'
 import { setStoredSession } from '@/lib/client-session'
 
 export default function CompleteProfilePage() {
-  const { data: session, status } = useSession()
+  const sessionHook = useSession()
+  const { data: session, status } = sessionHook ?? { data: null, status: 'loading' as const }
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
