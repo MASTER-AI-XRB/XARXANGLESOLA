@@ -6,7 +6,7 @@ export type ProductWithUser = {
   reserved: boolean
   prestec: boolean
   createdAt: Date
-  user: { nickname: string }
+  user: { nickname: string | null }
 }
 
 export const mapProduct = (product: ProductWithUser) => ({
@@ -17,5 +17,5 @@ export const mapProduct = (product: ProductWithUser) => ({
   reserved: product.reserved,
   prestec: product.prestec,
   createdAt: product.createdAt,
-  user: { nickname: product.user.nickname },
+  user: { nickname: product.user.nickname ?? '' },
 })
