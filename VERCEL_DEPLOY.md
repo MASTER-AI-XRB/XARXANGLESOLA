@@ -83,6 +83,24 @@ DATABASE_URL=postgresql://usuari:contrasenya@host:5432/nom_base_dades?schema=pub
 NODE_ENV=production
 ```
 
+### NextAuth i Google OAuth (obligatòries si fas servir "Continua amb Google"):
+
+```
+NEXTAUTH_URL=https://xarxanglesola.vercel.app
+AUTH_SECRET=<una cadena llarga i aleatòria, p.ex. openssl rand -base64 32>
+GOOGLE_CLIENT_ID=<el teu Client ID de Google Cloud>
+GOOGLE_CLIENT_SECRET=<el teu Client Secret de Google Cloud>
+```
+
+⚠️ **Important**:
+- `NEXTAUTH_URL`: Ha de ser **exactament** la URL de producció, **sense** barra final (e.g. `https://xarxanglesola.vercel.app`). Si falta o és incorrecta, veuràs `error=OAuthSignin` en clicar "Continua amb Google".
+- `AUTH_SECRET`: La mateixa que fas servir en local, o genera una de nova per producció.
+- **Google Cloud Console**: A [Credentials](https://console.cloud.google.com/apis/credentials) → el teu client OAuth → "Authorized redirect URIs" ha d’incloure:
+  ```
+  https://xarxanglesola.vercel.app/api/auth/callback/google
+  ```
+  (Afegeix també `http://localhost:3000/api/auth/callback/google` si tens dev en local.)
+
 ### Variables Opcionals (recomanades):
 
 ```
@@ -144,6 +162,12 @@ Per ara, deixa `NEXT_PUBLIC_SOCKET_URL` sense configurar i el xat estarà deshab
 3. Visita la URL i verifica que funciona
 
 ## 🔍 Troubleshooting
+
+### Error `OAuthSignin` en clicar "Continua amb Google" a producció
+- **`NEXTAUTH_URL`**: Ha d’estar definida a Vercel i ser exactament `https://xarxanglesola.vercel.app` (sense barra final). És la causa més habitual.
+- **Google Cloud**: A "Authorized redirect URIs" del teu client OAuth ha d’haver-hi `https://xarxanglesola.vercel.app/api/auth/callback/google`.
+- **Variables a Vercel**: Comprova que `AUTH_SECRET`, `GOOGLE_CLIENT_ID` i `GOOGLE_CLIENT_SECRET` estan definides per l’entorn **Production**.
+- Després de canviar variables, cal fer **Redeploy** al projecte a Vercel.
 
 ### Error: "Database connection failed"
 - Verifica que `DATABASE_URL` estigui ben configurada
