@@ -2,16 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { signIn, signOut } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
+import { clearStoredSession } from '@/lib/client-session'
 import NotificationSettings from '@/components/NotificationSettings'
 
 export default function ConfiguracioPage() {
   const [linkedProviders, setLinkedProviders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [unlinking, setUnlinking] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const router = useRouter()
   const { t } = useI18n()
-  const { showSuccess, showError } = useNotifications()
+  const { showError } = useNotifications()
 
   useEffect(() => {
     fetch('/api/auth/linked-accounts')
@@ -36,12 +41,37 @@ export default function ConfiguracioPage() {
         showError(t('common.error'), data?.error ?? t('config.unlinkGoogleError'))
         return
       }
-      setLinkedProviders((prev) => prev.filter((p) => p !== 'google'))
-      showSuccess(t('config.unlinkGoogleSuccess'), '')
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+      clearStoredSession()
+      await signOut({ redirect: false })
+      router.replace('/')
+      return
     } catch {
       showError(t('common.error'), t('config.unlinkGoogleError'))
     } finally {
       setUnlinking(false)
+    }
+  }
+
+  const handleChangeGoogle = async () => {
+    if (!window.confirm(t('config.changeGoogleConfirm'))) return
+    setChanging(true)
+    try {
+      const res = await fetch('/api/auth/unlink-google', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        showError(t('common.error'), data?.error ?? t('config.changeGoogleError'))
+        return
+      }
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+      clearStoredSession()
+      await signOut({ redirect: false })
+      signIn('google', { callbackUrl: '/app' })
+      return
+    } catch {
+      showError(t('common.error'), t('config.changeGoogleError'))
+    } finally {
+      setChanging(false)
     }
   }
 
@@ -78,8 +108,16 @@ export default function ConfiguracioPage() {
               </span>
               <button
                 type="button"
+                onClick={handleChangeGoogle}
+                disabled={unlinking || changing}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+              >
+                {changing ? t('common.loading') : t('config.changeGoogle')}
+              </button>
+              <button
+                type="button"
                 onClick={handleUnlinkGoogle}
-                disabled={unlinking}
+                disabled={unlinking || changing}
                 className="text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
               >
                 {unlinking ? t('common.loading') : t('config.unlinkGoogle')}

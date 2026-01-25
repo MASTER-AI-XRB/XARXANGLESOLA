@@ -19,17 +19,31 @@ export async function GET() {
     const user = userId
       ? await prisma.user.findUnique({
           where: { id: userId },
-          select: { id: true, nickname: true },
+          select: { id: true, nickname: true, password: true, lastLoginAt: true },
         })
       : userEmail
         ? await prisma.user.findUnique({
             where: { email: userEmail },
-            select: { id: true, nickname: true },
+            select: { id: true, nickname: true, password: true, lastLoginAt: true },
           })
         : null
 
     if (!user) {
       return apiError('Usuari no trobat', 404)
+    }
+
+    // Usuaris sense contrasenya (només OAuth): caducitat del nickname d'1 mes sense login
+    const hasPassword = Boolean(user.password)
+    if (!hasPassword && user.nickname && user.lastLoginAt) {
+      const monthAgo = new Date()
+      monthAgo.setDate(monthAgo.getDate() - 30)
+      if (user.lastLoginAt < monthAgo) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { nickname: null },
+        })
+        return apiOk({ needsNickname: true })
+      }
     }
 
     if (!user.nickname) {

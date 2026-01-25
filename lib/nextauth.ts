@@ -20,8 +20,37 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: { prompt: 'select_account' },
+      },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (!user?.id) return
+      const { prisma } = await import('@/lib/prisma')
+      const u = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, nickname: true, password: true, lastLoginAt: true },
+      })
+      if (!u) return
+      const hasPassword = Boolean(u.password)
+      const monthAgo = new Date()
+      monthAgo.setDate(monthAgo.getDate() - 30)
+      const expired =
+        !hasPassword &&
+        !!u.nickname &&
+        !!u.lastLoginAt &&
+        u.lastLoginAt < monthAgo
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          lastLoginAt: new Date(),
+          ...(expired ? { nickname: null } : {}),
+        },
+      })
+    },
+  },
   callbacks: {
     async signIn() {
       return true

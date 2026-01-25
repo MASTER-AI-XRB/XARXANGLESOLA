@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
           nickname: sanitizedNickname,
           email: email.trim().toLowerCase(),
           password: hashedPassword,
+          lastLoginAt: new Date(),
         },
       })
     } else {
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
         const hashedPassword = await bcrypt.hash(password, 10)
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { password: hashedPassword },
+          data: { password: hashedPassword, lastLoginAt: new Date() },
         })
       } else {
         // Verificar contrasenya per a usuaris existents
@@ -90,6 +91,10 @@ export async function POST(request: NextRequest) {
         if (!isValidPassword) {
           return apiError('Nickname o contrasenya incorrectes', 401)
         }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        })
       }
     }
 
