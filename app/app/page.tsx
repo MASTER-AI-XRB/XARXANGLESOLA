@@ -564,7 +564,7 @@ export default function ProductsPage() {
                             e.stopPropagation()
                             toggleReserved(product.id, e)
                           }}
-                          className="bg-white dark:bg-white rounded-full p-2 shadow-md hover:bg-gray-100 dark:hover:bg-gray-100 transition"
+                          className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                           title={t('products.reserveTitle')}
                         >
                           <svg
@@ -592,12 +592,12 @@ export default function ProductsPage() {
                         className={`rounded-full p-2 shadow-md transition ${
                           product.prestec
                             ? 'bg-green-500 hover:bg-green-600'
-                            : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                            : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                         title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                       >
                         <Image
-                          src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                          src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                           alt={product.prestec ? t('products.prestec') : ''}
                           width={20}
                           height={20}
@@ -616,7 +616,7 @@ export default function ProductsPage() {
                       className={`rounded-full p-2 shadow-md transition ${
                         favorites.has(product.id)
                           ? 'bg-red-500 hover:bg-red-600'
-                          : 'bg-white dark:bg-white hover:bg-gray-100 dark:hover:bg-gray-100'
+                          : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                     >
@@ -624,7 +624,7 @@ export default function ProductsPage() {
                         className={`w-5 h-5 ${
                           favorites.has(product.id)
                             ? 'text-white'
-                            : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
+                            : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
                         }`}
                         fill={favorites.has(product.id) ? 'currentColor' : 'none'}
                         stroke="currentColor"
@@ -668,10 +668,10 @@ export default function ProductsPage() {
                         {/* Icona per reservar/desreservar (bookmark) */}
                         <button
                           onClick={(e) => toggleReserved(product.id, e)}
-                          className={`rounded-full p-2 shadow-md hover:bg-gray-100 transition ${
+                          className={`rounded-full p-2 shadow-md transition ${
                             product.reserved
-                              ? 'bg-yellow-500 text-white'
-                              : 'bg-white text-gray-600'
+                              ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                           title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
                         >
@@ -705,12 +705,12 @@ export default function ProductsPage() {
                           className={`rounded-full p-2 shadow-md transition ${
                             product.prestec
                               ? 'bg-green-500 hover:bg-green-600'
-                              : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                              : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                           title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                         >
                           <Image
-                            src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                            src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                             alt={product.prestec ? t('products.prestec') : ''}
                             width={20}
                             height={20}
@@ -720,11 +720,11 @@ export default function ProductsPage() {
                         {/* Icona per eliminar */}
                         <button
                           onClick={(e) => deleteProduct(product.id, e)}
-                          className="bg-white rounded-full p-2 shadow-md hover:bg-red-100 transition"
+                          className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-red-100 dark:hover:bg-red-900/30 transition"
                           title={t('products.deleteProduct')}
                         >
                           <svg
-                            className="w-5 h-5 text-red-600"
+                            className="w-5 h-5 text-red-600 dark:text-red-400"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -745,7 +745,7 @@ export default function ProductsPage() {
                         className={`rounded-full p-2 shadow-md transition ${
                           favorites.has(product.id)
                             ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-white hover:bg-gray-100'
+                            : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                         data-testid={`favorite-toggle-${product.id}`}
                         aria-label={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
@@ -765,7 +765,7 @@ export default function ProductsPage() {
                           </svg>
                         ) : (
                           <svg
-                            className="w-5 h-5 text-gray-400 hover:text-red-500 transition"
+                            className="w-5 h-5 text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"

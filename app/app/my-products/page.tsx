@@ -94,6 +94,23 @@ export default function MyProductsPage() {
     }
   }
 
+  const deleteProduct = async (productId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(t('products.deleteConfirm'))) return
+
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        await fetchMyProducts()
+      }
+    } catch (error) {
+      logError('Error eliminant producte:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -190,7 +207,7 @@ export default function MyProductsPage() {
                     <p className="font-semibold line-clamp-2">{product.name}</p>
                   </div>
                 </div>
-                {/* Botons de reservat i préstec */}
+                {/* Botons de reservat, préstec i eliminar */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
                   {/* Botó per reservar/desreservar */}
                   <button
@@ -201,14 +218,14 @@ export default function MyProductsPage() {
                     }}
                     className={`rounded-full p-2 shadow-md transition ${
                       product.reserved
-                        ? 'bg-yellow-500 hover:bg-yellow-600'
-                        : 'bg-white dark:bg-white hover:bg-gray-100 dark:hover:bg-gray-100'
+                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                        : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                     title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
                   >
                     {product.reserved ? (
                       <svg
-                        className="w-5 h-5 text-white"
+                        className="w-5 h-5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         preserveAspectRatio="xMidYMid meet"
@@ -217,7 +234,7 @@ export default function MyProductsPage() {
                       </svg>
                     ) : (
                       <svg
-                        className="w-5 h-5 text-gray-600 dark:text-gray-800"
+                        className="w-5 h-5 text-gray-600 dark:text-gray-300"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -242,17 +259,42 @@ export default function MyProductsPage() {
                     className={`rounded-full p-2 shadow-md transition ${
                       product.prestec
                         ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                        : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                     title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                   >
                     <Image
-                      src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                      src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                       alt={product.prestec ? t('products.prestec') : ''}
                       width={20}
                       height={20}
                       className="w-5 h-5 object-contain"
                     />
+                  </button>
+                  {/* Botó per eliminar */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      deleteProduct(product.id, e)
+                    }}
+                    className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                    title={t('products.deleteProduct')}
+                  >
+                    <svg
+                      className="w-5 h-5 text-red-600 dark:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      preserveAspectRatio="xMidYMid meet"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
                   </button>
                 </div>
                 </Link>
@@ -287,7 +329,7 @@ export default function MyProductsPage() {
                       className={`rounded-full p-2 shadow-md transition ${
                         product.reserved
                           ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
                     >
@@ -325,17 +367,41 @@ export default function MyProductsPage() {
                       className={`rounded-full p-2 shadow-md transition ${
                         product.prestec
                           ? 'bg-green-500 hover:bg-green-600'
-                          : 'bg-gray-100 dark:bg-white hover:bg-gray-200 dark:hover:bg-gray-100'
+                          : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       title={product.prestec ? t('products.unprestecTitle') : t('products.prestecTitle')}
                     >
                       <Image
-                        src={product.prestec ? '/prestec_on.png' : '/prestec_off.png'}
+                        src={product.prestec ? '/prestec_on.png' : (theme === 'dark' ? '/prestec_off_dark.png' : '/prestec_off.png')}
                         alt={product.prestec ? t('products.prestec') : ''}
                         width={20}
                         height={20}
                         className="w-5 h-5"
                       />
+                    </button>
+                    {/* Botó per eliminar */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        deleteProduct(product.id, e)
+                      }}
+                      className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                      title={t('products.deleteProduct')}
+                    >
+                      <svg
+                        className="w-5 h-5 text-red-600 dark:text-red-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </div>

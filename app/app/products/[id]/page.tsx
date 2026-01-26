@@ -350,7 +350,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 ) : (
                   nickname && (
                     <Link
-                      href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}`}
+                      href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}&productId=${product.id}`}
                       className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"
                     >
                       {t('productDetail.contact')}

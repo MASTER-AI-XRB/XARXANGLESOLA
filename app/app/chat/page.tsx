@@ -591,10 +591,11 @@ export default function ChatPage() {
 
     const urlParams = new URLSearchParams(window.location.search)
     const targetNickname = urlParams.get('nickname')
+    const targetProductId = urlParams.get('productId')
     if (targetNickname) {
       setTimeout(() => {
         setActivePrivateChat(targetNickname)
-        setActivePrivateTab('general')
+        setActivePrivateTab(targetProductId || 'general')
         setOpenPrivateChats((prev) => {
           if (!prev.includes(targetNickname)) {
             return [...prev, targetNickname]
