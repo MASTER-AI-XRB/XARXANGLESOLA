@@ -14,9 +14,11 @@ export default function ConfiguracioPage() {
   const [loading, setLoading] = useState(true)
   const [unlinking, setUnlinking] = useState(false)
   const [changing, setChanging] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const router = useRouter()
   const { t } = useI18n()
-  const { showError } = useNotifications()
+  const { showError, showInfo } = useNotifications()
 
   useEffect(() => {
     fetch('/api/auth/linked-accounts')
@@ -75,6 +77,52 @@ export default function ConfiguracioPage() {
     }
   }
 
+  const handleExportData = async () => {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/gdpr/export')
+      if (!res.ok) {
+        const data = await res.json()
+        showError(t('common.error'), data?.error ?? t('legal.gdpr.exportError'))
+        return
+      }
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `xarxa-anglesola-dades-${Date.now()}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      showInfo(t('legal.gdpr.exportSuccess'), '')
+    } catch {
+      showError(t('common.error'), t('legal.gdpr.exportError'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t('legal.gdpr.deleteConfirm'))) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/gdpr/delete', { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) {
+        showError(t('common.error'), data?.error ?? t('legal.gdpr.deleteError'))
+        return
+      }
+      clearStoredSession()
+      await signOut({ redirect: false })
+      router.replace('/')
+    } catch {
+      showError(t('common.error'), t('legal.gdpr.deleteError'))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
       <Link
@@ -128,6 +176,40 @@ export default function ConfiguracioPage() {
               {t('config.noGoogleLinked')}
             </p>
           )}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          {t('config.gdpr.title')}
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              {t('config.gdpr.exportDescription')}
+            </p>
+            <button
+              type="button"
+              onClick={handleExportData}
+              disabled={exporting}
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? t('common.loading') : t('legal.gdpr.exportData')}
+            </button>
+          </div>
+          <div className="border-t dark:border-gray-700 pt-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              {t('config.gdpr.deleteDescription')}
+            </p>
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleting ? t('common.loading') : t('legal.gdpr.deleteAccount')}
+            </button>
+          </div>
         </div>
       </section>
     </div>

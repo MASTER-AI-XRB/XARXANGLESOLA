@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import { getStoredNickname, setStoredSession } from '@/lib/client-session'
@@ -21,6 +22,7 @@ export default function Home() {
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [backgroundSize, setBackgroundSize] = useState('80%')
   const [scrollY, setScrollY] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
@@ -374,6 +376,11 @@ export default function Home() {
         setError(t('auth.passwordsDoNotMatch'))
         return
       }
+
+      if (!acceptTerms) {
+        setError(t('auth.mustAccept'))
+        return
+      }
     }
 
     try {
@@ -680,12 +687,39 @@ export default function Home() {
               {error}
             </div>
           )}
+          {isNewUser && (
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                required
+              />
+              <label htmlFor="acceptTerms" className="text-sm text-gray-700 dark:text-gray-300">
+                {t('auth.acceptTerms')}{' '}
+                <Link href="/privacy" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank">
+                  {t('auth.privacyPolicy')}
+                </Link>
+                {' '}{t('auth.and')}{' '}
+                <Link href="/terms" className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank">
+                  {t('auth.termsConditions')}
+                </Link>
+              </label>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="isNewUser"
               checked={isNewUser}
-              onChange={(e) => setIsNewUser(e.target.checked)}
+              onChange={(e) => {
+                setIsNewUser(e.target.checked)
+                if (!e.target.checked) {
+                  setAcceptTerms(false)
+                }
+              }}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="isNewUser" className="text-sm text-gray-700 dark:text-gray-300">
@@ -694,7 +728,12 @@ export default function Home() {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+            disabled={isNewUser && !acceptTerms}
+            className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ${
+              isNewUser && !acceptTerms
+                ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
+            }`}
           >
             {isNewUser ? t('auth.register') : t('auth.enter')}
           </button>

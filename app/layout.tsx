@@ -5,6 +5,7 @@ import { I18nProvider } from '@/lib/i18n'
 import { ThemeProvider } from '@/lib/theme'
 import { NotificationProvider } from '@/lib/notifications'
 import AuthProvider from '@/components/AuthProvider'
+import CookieBanner from '@/components/CookieBanner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -31,7 +32,10 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <NotificationProvider>
-              <AuthProvider>{children}</AuthProvider>
+              <AuthProvider>
+                {children}
+                <CookieBanner />
+              </AuthProvider>
             </NotificationProvider>
           </I18nProvider>
         </ThemeProvider>

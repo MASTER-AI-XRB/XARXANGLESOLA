@@ -128,6 +128,107 @@
     "disableNotifications": "Desactivar notificacions",
     "disableInstructions": "Desactivar notificacions",
     "disableInstructionsMessage": "Per desactivar les notificacions, ves a la configuració del teu navegador i bloqueja els permisos de notificació per a aquest lloc web."
+  },
+  "legal": {
+    "privacy": {
+      "title": "Política de Privacitat",
+      "lastUpdated": "Última actualització",
+      "section1": {
+        "title": "1. Introducció",
+        "content": "Aquesta Política de Privacitat descriu com recopilem, utilitzem i protegim la teva informació personal quan utilitzes la plataforma Xarxa Anglesola. Ens comprometem a protegir la teva privacitat i complir amb la normativa de protecció de dades aplicable."
+      },
+      "section2": {
+        "title": "2. Dades que recopilem",
+        "item1": "Dades d'identificació: nickname, email, nom (opcional)",
+        "item2": "Dades d'autenticació: contrasenya encriptada, tokens de sessió",
+        "item3": "Contingut generat: productes publicats, missatges de xat, llista de preferits",
+        "item4": "Dades de comportament: preferències de notificació, activitat a la plataforma",
+        "item5": "Dades tècniques: adreça IP, cookies, informació del dispositiu"
+      },
+      "section3": {
+        "title": "3. Finalitat del tractament",
+        "content": "Utilitzem les teves dades per: proporcionar i millorar els nostres serveis, gestionar el teu compte, facilitar la comunicació entre usuaris, enviar notificacions rellevants, garantir la seguretat de la plataforma i complir amb obligacions legals."
+      },
+      "section4": {
+        "title": "4. Base legal",
+        "content": "El tractament de les teves dades es basa en: el teu consentiment, l'execució d'un contracte (prestació del servei), l'interès legítim (seguretat i millora del servei) i el compliment d'obligacions legals."
+      },
+      "section5": {
+        "title": "5. Els teus drets",
+        "content": "D'acord amb el Reglament General de Protecció de Dades (RGPD), tens dret a:",
+        "right1": "Accés: obtenir una còpia de les teves dades personals",
+        "right2": "Rectificació: corregir dades inexactes o incompletes",
+        "right3": "Supressió: sol·licitar l'eliminació de les teves dades",
+        "right4": "Portabilitat: rebre les teves dades en un format estructurat",
+        "right5": "Oposició: oposar-te al tractament de les teves dades en determinades circumstàncies"
+      },
+      "section6": {
+        "title": "6. Retenció de dades",
+        "content": "Conservem les teves dades mentre el teu compte estigui actiu i durant el període necessari per complir amb obligacions legals. Pots eliminar el teu compte en qualsevol moment des de la configuració."
+      },
+      "section7": {
+        "title": "7. Seguretat",
+        "content": "Implementem mesures de seguretat tècniques i organitzatives per protegir les teves dades contra accés no autoritzat, pèrdua o destrucció. Les contrasenyes s'emmagatzemen encriptades i utilitzem connexions segures (HTTPS)."
+      },
+      "section8": {
+        "title": "8. Contacte",
+        "content": "Per exercir els teus drets o fer consultes sobre privacitat, pots contactar-nos a través de la configuració del teu compte o utilitzant les funcionalitats de gestió de dades disponibles a la plataforma."
+      }
+    },
+    "terms": {
+      "title": "Termes i Condicions",
+      "lastUpdated": "Última actualització",
+      "section1": {
+        "title": "1. Acceptació dels termes",
+        "content": "En utilitzar la plataforma Xarxa Anglesola, acceptes aquests Termes i Condicions. Si no estàs d'acord, no utilitzis el servei."
+      },
+      "section2": {
+        "title": "2. Ús del servei",
+        "content": "Et compromets a utilitzar la plataforma de manera lícita i respectuosa. No pots utilitzar el servei per activitats il·legals, fraudulentes o que violin drets de tercers."
+      },
+      "section3": {
+        "title": "3. Contingut de l'usuari",
+        "content": "Ets responsable del contingut que publiques (productes, missatges, imatges). Ens reservem el dret de moderar i eliminar contingut que considerem inadequat, ofensiu o que violi aquests termes."
+      },
+      "section4": {
+        "title": "4. Propietat intel·lectual",
+        "content": "Els usuaris conserven els drets sobre el contingut que publiquen. En publicar contingut, ens atorgues una llicència per utilitzar-lo dins de la plataforma per a la prestació del servei."
+      },
+      "section5": {
+        "title": "5. Limitació de responsabilitat",
+        "content": "La plataforma es proporciona 'tal com està'. No ens responsabilitzem de danys directes, indirectes o conseqüencials derivats de l'ús del servei. Els intercanvis entre usuaris són responsabilitat dels usuaris."
+      },
+      "section6": {
+        "title": "6. Modificacions",
+        "content": "Ens reservem el dret de modificar aquests termes en qualsevol moment. Les modificacions entraràn en vigor quan es publiquin a la plataforma. L'ús continuat del servei després de les modificacions implica l'acceptació dels nous termes."
+      },
+      "section7": {
+        "title": "7. Resolució de conflictes",
+        "content": "Qualsevol disputa relacionada amb l'ús de la plataforma es regirà per la legislació espanyola i catalana. Els usuaris es comprometen a intentar resoldre els conflictes de manera amistosa abans de recórrer a accions legals."
+      }
+    },
+    "cookies": {
+      "message": "Aquest lloc web utilitza cookies per millorar l'experiència d'usuari i proporcionar funcionalitats essencials.",
+      "learnMore": "Més informació",
+      "accept": "Acceptar",
+      "reject": "Rebutjar"
+    },
+    "gdpr": {
+      "exportData": "Exportar dades",
+      "deleteAccount": "Eliminar compte",
+      "exportSuccess": "Les teves dades s'han exportat correctament",
+      "exportError": "Error en exportar les dades",
+      "deleteConfirm": "Estàs segur que vols eliminar el teu compte? Aquesta acció no es pot desfer.",
+      "deleteSuccess": "El teu compte s'ha eliminat correctament",
+      "deleteError": "Error en eliminar el compte"
+    }
+  },
+  "auth": {
+    "acceptTerms": "Accepto la",
+    "privacyPolicy": "Política de Privacitat",
+    "and": "i els",
+    "termsConditions": "Termes i Condicions",
+    "mustAccept": "Has d'acceptar la política de privacitat i els termes i condicions per registrar-te"
   }
 }
 
