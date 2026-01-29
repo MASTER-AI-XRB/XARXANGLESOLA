@@ -90,6 +90,42 @@ export default function NotificationSettings() {
     return () => clearInterval(interval)
   }, [showDisableModal, showEnableModal])
 
+  const ensurePushSubscribed = useCallback(async () => {
+    if (typeof window === 'undefined' || !nickname) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (window.Notification?.permission !== 'granted') return
+    try {
+      const vapidRes = await fetch('/api/notifications/vapid-public-key')
+      if (!vapidRes.ok) return
+      const { publicKey } = await vapidRes.json()
+      if (!publicKey) return
+      const reg = await navigator.serviceWorker.register('/push-sw.js', { scope: '/' })
+      await reg.update()
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+        })
+      }
+      if (!sub) return
+      const res = await fetch('/api/notifications/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+        credentials: 'same-origin',
+      })
+      if (!res.ok) logError('push-subscribe failed', res.status)
+    } catch (e) {
+      logError('ensurePushSubscribed', e)
+    }
+  }, [nickname])
+
+  useEffect(() => {
+    if (permission !== 'granted' || !nickname) return
+    ensurePushSubscribed()
+  }, [permission, nickname, ensurePushSubscribed])
+
   const handleToggleNotifications = async () => {
     if (typeof window === 'undefined') {
       return
