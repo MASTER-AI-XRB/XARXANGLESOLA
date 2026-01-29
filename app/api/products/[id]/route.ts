@@ -26,11 +26,9 @@ export async function GET(
     const product = await prisma.product.findUnique({
       where: { id: resolvedParams.id },
       include: {
-        user: {
-          select: {
-            nickname: true,
-          },
-        },
+        user: { select: { nickname: true } },
+        reservedBy: { select: { nickname: true } },
+        _count: { select: { favorites: true } },
       },
     })
 

@@ -593,6 +593,9 @@ export default function ChatPage() {
     const targetNickname = urlParams.get('nickname')
     const targetProductId = urlParams.get('productId')
     if (targetNickname) {
+      if (targetProductId && nickname && nickname !== targetNickname) {
+        fetch(`/api/products/${targetProductId}/reserve-on-dm-open`, { method: 'POST' }).catch(() => {})
+      }
       setTimeout(() => {
         setActivePrivateChat(targetNickname)
         setActivePrivateTab(targetProductId || 'general')

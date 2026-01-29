@@ -1,8 +1,10 @@
 import type { MetadataRoute } from 'next'
+import { APP_VERSION } from '@/lib/version'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Xarxa Anglesola',
+    version: APP_VERSION,
     short_name: 'Xarxa',
     description: 'Plataforma per a intercanviar productes',
     start_url: '/app',
@@ -16,5 +18,5 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/jpeg',
       },
     ],
-  }
+  } as MetadataRoute.Manifest
 }

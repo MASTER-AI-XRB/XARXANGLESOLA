@@ -18,16 +18,13 @@ export async function GET(
     const products = await prisma.product.findMany({
       where: {
         user: {
-          nickname: {
-            equals: nickname,
-            mode: 'insensitive',
-          },
+          nickname: { equals: nickname, mode: 'insensitive' },
         },
       },
       include: {
-        user: {
-          select: { nickname: true },
-        },
+        user: { select: { nickname: true } },
+        reservedBy: { select: { nickname: true } },
+        _count: { select: { favorites: true } },
       },
       orderBy: { createdAt: 'desc' },
     })

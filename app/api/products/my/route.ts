@@ -20,15 +20,11 @@ export async function GET(request: NextRequest) {
     const products = await prisma.product.findMany({
       where: { userId: authUserId },
       include: {
-        user: {
-          select: {
-            nickname: true,
-          },
-        },
+        user: { select: { nickname: true } },
+        reservedBy: { select: { nickname: true } },
+        _count: { select: { favorites: true } },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     })
 
     const productsWithParsedImages = products.map(mapProduct)

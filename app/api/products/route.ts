@@ -16,15 +16,11 @@ export async function GET() {
   try {
     const products = await prisma.product.findMany({
       include: {
-        user: {
-          select: {
-            nickname: true,
-          },
-        },
+        user: { select: { nickname: true } },
+        reservedBy: { select: { nickname: true } },
+        _count: { select: { favorites: true } },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     })
 
     const productsWithParsedImages = products.map(mapProduct)

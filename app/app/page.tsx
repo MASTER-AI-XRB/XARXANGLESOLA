@@ -19,11 +19,11 @@ interface Product {
   description: string | null
   images: string[]
   reserved: boolean
+  reservedBy: { nickname: string } | null
   prestec: boolean
-  user: {
-    nickname: string
-  }
+  user: { nickname: string }
   createdAt: string
+  favoritesCount: number
 }
 
 export default function ProductsPage() {
@@ -223,10 +223,13 @@ export default function ProductsPage() {
 
       if (response.ok) {
         logInfo('Operació exitosa, refrescant estat...')
-        // Refrescar estat de tots els preferits per assegurar que es manté
-        if (products.length > 0) {
-          await fetchFavoritesStatus(products)
-        }
+        setFavorites((prev) => {
+          const next = new Set(prev)
+          if (isFavorite) next.delete(productId)
+          else next.add(productId)
+          return next
+        })
+        await fetchProducts()
       } else {
         logError(`Error ${isFavorite ? 'eliminant' : 'afegint'} preferit:`, responseData)
         alert(`Error: ${responseData.error || 'Error desconegut'}`)
@@ -237,11 +240,19 @@ export default function ProductsPage() {
     }
   }
 
+  const canReserve = (p: Product) => nickname === p.user.nickname && !p.reserved
+  const canUnreserve = (p: Product) =>
+    !!p.reserved &&
+    (nickname === (p.reservedBy?.nickname ?? '') ||
+      (nickname === p.user.nickname && !p.reservedBy))
+  const isReservedByOwner = (p: Product) =>
+    !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     const product = products.find((p) => p.id === productId)
-    if (!product || product.user.nickname !== nickname) return
+    if (!product || (!canReserve(product) && !canUnreserve(product))) return
 
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
@@ -523,18 +534,65 @@ export default function ProductsPage() {
                     <p className="font-semibold line-clamp-2">{product.name}</p>
                   </div>
                 </div>
+                {/* Comptador de preferits (cantonada inferior esquerra) */}
+                <div
+                  className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full bg-black/50 dark:bg-black/60 text-white px-2 py-0.5 text-xs"
+                  title={t('products.favoritesCount', { count: product.favoritesCount })}
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                  </svg>
+                  <span>{product.favoritesCount}</span>
+                </div>
                 {/* Icones a la cantonada superior dreta */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
-                  {product.reserved && (
-                    <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md" title={t('products.reserved')}>
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                      </svg>
+                  {canUnreserve(product) ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleReserved(product.id, e)
+                      }}
+                      className={`rounded-full p-2 shadow-md transition ${
+                        product.reserved
+                          ? isReservedByOwner(product)
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                          : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      title={product.reserved ? t('products.unreserveTitle') : t('products.reserved')}
+                    >
+                      {product.reserved ? (
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      )}
+                    </button>
+                  ) : (
+                    <div
+                      className={`rounded-full p-2 shadow-md ${
+                        product.reserved
+                          ? isReservedByOwner(product)
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-yellow-500 text-white'
+                          : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                      }`}
+                      title={product.reserved ? t('products.reserved') : t('products.notReserved')}
+                    >
+                      {product.reserved ? (
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      )}
                     </div>
                   )}
                   {product.prestec && (
@@ -557,7 +615,7 @@ export default function ProductsPage() {
                   )}
                   {product.user.nickname === nickname ? (
                     <>
-                      {!product.reserved && (
+                      {canReserve(product) && (
                         <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -606,13 +664,13 @@ export default function ProductsPage() {
                       </button>
                     </>
                   ) : (
-                      <button
+                    <button
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         toggleFavorite(product.id, e)
                       }}
-                        data-testid={`favorite-toggle-${product.id}`}
+                      data-testid={`favorite-toggle-${product.id}`}
                       className={`rounded-full p-2 shadow-md transition ${
                         favorites.has(product.id)
                           ? 'bg-red-500 hover:bg-red-600'
@@ -620,25 +678,25 @@ export default function ProductsPage() {
                       }`}
                       title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
                     >
-                      <svg
-                        className={`w-5 h-5 ${
-                          favorites.has(product.id)
-                            ? 'text-white'
-                            : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
-                        }`}
-                        fill={favorites.has(product.id) ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
-                    </button>
+                          <svg
+                            className={`w-5 h-5 ${
+                              favorites.has(product.id)
+                                ? 'text-white'
+                                : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
+                            }`}
+                            fill={favorites.has(product.id) ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            preserveAspectRatio="xMidYMid meet"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                        </button>
                   )}
                 </div>
               </Link>
@@ -662,44 +720,64 @@ export default function ProductsPage() {
                     />
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2">
-                    {/* Si ets propietari */}
-                  {product.user.nickname === nickname ? (
+                    {canUnreserve(product) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => toggleReserved(product.id, e)}
+                        className={`rounded-full p-2 shadow-md transition ${
+                          product.reserved
+                            ? isReservedByOwner(product)
+                              ? 'bg-blue-500 text-white hover:bg-blue-600'
+                              : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                        title={product.reserved ? t('products.unreserveTitle') : t('products.reserved')}
+                      >
+                        {product.reserved ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      <div
+                        className={`rounded-full p-2 shadow-md ${
+                          product.reserved
+                            ? isReservedByOwner(product)
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-yellow-500 text-white'
+                            : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                        }`}
+                        title={product.reserved ? t('products.reserved') : t('products.notReserved')}
+                      >
+                        {product.reserved ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    {product.user.nickname === nickname ? (
                       <>
-                        {/* Icona per reservar/desreservar (bookmark) */}
-                        <button
-                          onClick={(e) => toggleReserved(product.id, e)}
-                          className={`rounded-full p-2 shadow-md transition ${
-                            product.reserved
-                              ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                          title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
-                        >
-                          {product.reserved ? (
-                            <svg
-                              className="w-5 h-5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        {canReserve(product) && (
+                          <button
+                            onClick={(e) => toggleReserved(product.id, e)}
+                            className="rounded-full p-2 shadow-md transition bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            title={t('products.reserveTitle')}
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                             </svg>
-                          ) : (
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                        {/* Icona per préstec */}
+                          </button>
+                        )}
                         <button
                           onClick={(e) => togglePrestec(product.id, e)}
                           className={`rounded-full p-2 shadow-md transition ${
@@ -717,7 +795,6 @@ export default function ProductsPage() {
                             className="w-5 h-5"
                           />
                         </button>
-                        {/* Icona per eliminar */}
                         <button
                           onClick={(e) => deleteProduct(product.id, e)}
                           className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-red-100 dark:hover:bg-red-900/30 transition"
@@ -739,7 +816,6 @@ export default function ProductsPage() {
                         </button>
                       </>
                     ) : (
-                      /* Si no ets propietari, només mostra el cor per preferits */
                       <button
                         onClick={(e) => toggleFavorite(product.id, e)}
                         className={`rounded-full p-2 shadow-md transition ${
@@ -798,25 +874,36 @@ export default function ProductsPage() {
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {product.user.nickname}
                   </span>
-                  <Link
-                    href={`/app/products/${product.id}`}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition"
-                    title={t('products.seeMoreDetails')}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+                      title={t('products.favoritesCount', { count: product.favoritesCount })}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </Link>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                      {product.favoritesCount}
+                    </span>
+                    <Link
+                      href={`/app/products/${product.id}`}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition"
+                      title={t('products.seeMoreDetails')}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

@@ -7,6 +7,7 @@ import { signIn, signOut } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import { clearStoredSession } from '@/lib/client-session'
+import { APP_VERSION } from '@/lib/version'
 import NotificationSettings from '@/components/NotificationSettings'
 
 export default function ConfiguracioPage() {
@@ -211,6 +212,12 @@ export default function ConfiguracioPage() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t('config.version')}: {APP_VERSION}
+        </p>
       </section>
     </div>
   )

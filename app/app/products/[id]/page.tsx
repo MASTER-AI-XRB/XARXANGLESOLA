@@ -16,10 +16,9 @@ interface Product {
   description: string | null
   images: string[]
   reserved: boolean
+  reservedBy: { nickname: string } | null
   prestec: boolean
-  user: {
-    nickname: string
-  }
+  user: { nickname: string }
   createdAt: string
 }
 
@@ -65,8 +64,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  const canReserve = product && nickname === product.user.nickname && !product.reserved
+  const canUnreserve =
+    product &&
+    product.reserved &&
+    (nickname === (product.reservedBy?.nickname ?? '') ||
+      (nickname === product.user.nickname && !product.reservedBy))
+  const isReservedByOwner =
+    !!product?.reserved && product.reservedBy?.nickname === product.user.nickname
+
   const toggleReserved = async () => {
-    if (!product || product.user.nickname !== nickname) return
+    if (!product || (!canReserve && !canUnreserve)) return
 
     try {
       const response = await fetch(`/api/products/${product.id}/reserve`, {
@@ -75,8 +83,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ reserved: !product.reserved }),
       })
       if (response.ok) {
-        const data = await response.json()
-        setProduct({ ...product, reserved: data.reserved })
+        await fetchProduct()
       }
     } catch (error) {
       logError('Error actualitzant reserva:', error)
@@ -242,46 +249,37 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </div>
                 {nickname && nickname === product.user.nickname ? (
                   <div className="grid grid-cols-2 gap-2 w-full sm:w-auto justify-items-end sm:justify-items-start ml-auto pr-2">
-                    <button
-                      onClick={toggleReserved}
-                      aria-label={product.reserved ? t('products.unreserved') : t('products.reserve')}
-                      className={`group relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex items-center justify-center ${
-                        product.reserved
-                          ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
-                        {product.reserved ? t('products.unreserved') : t('products.reserve')}
-                      </span>
-                      {product.reserved ? (
-                        <>
-                          <svg
-                            className="w-10 h-10"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                          </svg>
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-10 h-10"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                            />
-                          </svg>
-                        </>
-                      )}
-                    </button>
+                    {canUnreserve ? (
+                      <button
+                        onClick={toggleReserved}
+                        aria-label={t('products.unreserveTitle')}
+                        className={`group relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex items-center justify-center text-white ${
+                          isReservedByOwner
+                            ? 'bg-blue-500 hover:bg-blue-600'
+                            : 'bg-yellow-500 hover:bg-yellow-600'
+                        }`}
+                      >
+                        <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                          {t('products.unreserveTitle')}
+                        </span>
+                        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      </button>
+                    ) : canReserve ? (
+                      <button
+                        onClick={toggleReserved}
+                        aria-label={t('products.reserveTitle')}
+                        className="group relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg font-medium transition flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      >
+                        <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-black/80 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                          {t('products.reserveTitle')}
+                        </span>
+                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      </button>
+                    ) : null}
                     <button
                       onClick={togglePrestec}
                       aria-label={t('products.prestec')}
@@ -349,12 +347,26 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 ) : (
                   nickname && (
-                    <Link
-                      href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}&productId=${product.id}`}
-                      className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"
-                    >
-                      {t('productDetail.contact')}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}&productId=${product.id}`}
+                        className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"
+                      >
+                        {t('productDetail.contact')}
+                      </Link>
+                      {canUnreserve ? (
+                        <button
+                          onClick={toggleReserved}
+                          className="inline-flex items-center justify-center rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 p-2 sm:p-2.5"
+                          title={t('products.unreserveTitle')}
+                          aria-label={t('products.unreserveTitle')}
+                        >
+                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
                   )
                 )}
               </div>

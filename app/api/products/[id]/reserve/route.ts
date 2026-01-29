@@ -5,7 +5,6 @@ import { validateUuid } from '@/lib/validation'
 import { apiError, apiOk } from '@/lib/api-response'
 import { logError } from '@/lib/logger'
 
-// Funció helper per obtenir instància de Prisma
 function getPrisma() {
   try {
     return new PrismaClient({
@@ -29,7 +28,8 @@ export async function PATCH(
       return apiError(idValidation.error || 'Producte no vàlid', 400)
     }
     const authUserId = getAuthUserId(request)
-    const { reserved } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const reserved = body.reserved
 
     if (!authUserId) {
       return apiError('Usuari no autenticat', 401)
@@ -38,7 +38,6 @@ export async function PATCH(
       return apiError('Valor de reserva no vàlid', 400)
     }
 
-    // Comprovar que l'usuari és el propietari
     const product = await prisma.product.findUnique({
       where: { id: resolvedParams.id },
     })
@@ -47,16 +46,31 @@ export async function PATCH(
       return apiError('Producte no trobat', 404)
     }
 
-    if (product.userId !== authUserId) {
-      return apiError('No tens permisos per modificar aquest producte', 403)
+    if (reserved) {
+      if (product.userId !== authUserId) {
+        return apiError('No tens permisos per reservar aquest producte', 403)
+      }
+      if (product.reserved) {
+        return apiError('El producte ja està reservat', 409)
+      }
+      const updated = await prisma.product.update({
+        where: { id: resolvedParams.id },
+        data: { reserved: true, reservedById: authUserId },
+      })
+      return apiOk({ reserved: updated.reserved })
     }
 
-    const updatedProduct = await prisma.product.update({
+    const mayUnreserve =
+      product.reservedById === authUserId ||
+      (product.reservedById == null && product.userId === authUserId)
+    if (!mayUnreserve) {
+      return apiError('Només qui ha sol·licitat la reserva pot desreservar', 403)
+    }
+    const updated = await prisma.product.update({
       where: { id: resolvedParams.id },
-      data: { reserved: reserved },
+      data: { reserved: false, reservedById: null },
     })
-
-    return apiOk({ reserved: updatedProduct.reserved })
+    return apiOk({ reserved: updated.reserved })
   } catch (error) {
     logError('Error actualitzant reserva:', error)
     return apiError('Error actualitzant reserva', 500)
@@ -64,4 +78,3 @@ export async function PATCH(
     await prisma.$disconnect()
   }
 }
-

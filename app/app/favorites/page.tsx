@@ -14,11 +14,11 @@ interface Product {
   description: string | null
   images: string[]
   reserved: boolean
+  reservedBy: { nickname: string } | null
   prestec: boolean
-  user: {
-    nickname: string
-  }
+  user: { nickname: string }
   createdAt: string
+  favoritesCount: number
 }
 
 export default function FavoritesPage() {
@@ -50,6 +50,9 @@ export default function FavoritesPage() {
       setLoading(false)
     }
   }
+
+  const isReservedByOwner = (p: Product) =>
+    !!p.reserved && p.reservedBy?.nickname === p.user.nickname
 
   const removeFavorite = async (productId: string) => {
     try {
@@ -209,12 +212,13 @@ export default function FavoritesPage() {
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2">
                     {product.reserved && (
-                      <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md" title={t('products.reserved')}>
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
+                      <div
+                        className={`text-white rounded-full p-2 shadow-md ${
+                          isReservedByOwner(product) ? 'bg-blue-500' : 'bg-yellow-500'
+                        }`}
+                        title={t('products.reserved')}
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                         </svg>
                       </div>

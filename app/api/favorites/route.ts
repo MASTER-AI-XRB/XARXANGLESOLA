@@ -33,11 +33,9 @@ export async function GET(request: NextRequest) {
       include: {
         product: {
           include: {
-            user: {
-              select: {
-                nickname: true,
-              },
-            },
+            user: { select: { nickname: true } },
+            reservedBy: { select: { nickname: true } },
+            _count: { select: { favorites: true } },
           },
         },
       },

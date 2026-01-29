@@ -25,6 +25,7 @@ model User {
   updatedAt        DateTime  @updatedAt
 
   products               Product[]
+  productsReserved       Product[]              @relation("ProductReservedBy")
   messages               Message[]
   favorites              Favorite[]
   notificationPreference NotificationPreference?
@@ -72,21 +73,24 @@ model VerificationToken {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  images      String   // JSON array of image paths
-  reserved    Boolean  @default(false)
-  prestec     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images       String   // JSON array of image paths
+  reserved     Boolean  @default(false)
+  reservedById String?
+  reservedBy   User?    @relation("ProductReservedBy", fields: [reservedById], references: [id], onDelete: SetNull)
+  prestec      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   favorites   Favorite[]
   messages    Message[]
-  
+
   @@index([userId])
+  @@index([reservedById])
   @@index([createdAt])
 }
 

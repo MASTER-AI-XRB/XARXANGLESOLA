@@ -16,10 +16,9 @@ interface Product {
   description: string | null
   images: string[]
   reserved: boolean
+  reservedBy: { nickname: string } | null
   prestec: boolean
-  user: {
-    nickname: string
-  }
+  user: { nickname: string }
   createdAt: string
 }
 
@@ -54,11 +53,20 @@ export default function MyProductsPage() {
     }
   }
 
+  const canReserve = (p: Product) =>
+    nickname === p.user.nickname && !p.reserved
+  const canUnreserve = (p: Product) =>
+    p.reserved &&
+    (nickname === (p.reservedBy?.nickname ?? '') ||
+      (nickname === p.user.nickname && !p.reservedBy))
+  const isReservedByOwner = (p: Product) =>
+    !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     const product = products.find((p) => p.id === productId)
-    if (!product) return
+    if (!product || (!canReserve(product) && !canUnreserve(product))) return
 
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
@@ -209,30 +217,65 @@ export default function MyProductsPage() {
                 </div>
                 {/* Botons de reservat, préstec i eliminar */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
-                  {/* Botó per reservar/desreservar */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      toggleReserved(product.id, e)
-                    }}
-                    className={`rounded-full p-2 shadow-md transition ${
-                      product.reserved
-                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                        : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                    title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
-                  >
-                    {product.reserved ? (
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                      </svg>
-                    ) : (
+                  {canUnreserve(product) ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleReserved(product.id, e)
+                      }}
+                      className={`rounded-full p-2 shadow-md transition ${
+                        product.reserved
+                          ? isReservedByOwner(product)
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                          : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      title={product.reserved ? t('products.unreserveTitle') : t('products.reserved')}
+                    >
+                      {product.reserved ? (
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      )}
+                    </button>
+                  ) : (
+                    <div
+                      className={`rounded-full p-2 shadow-md ${
+                        product.reserved
+                          ? isReservedByOwner(product)
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-yellow-500 text-white'
+                          : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                      }`}
+                      title={product.reserved ? t('products.reserved') : t('products.notReserved')}
+                    >
+                      {product.reserved ? (
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      )}
+                    </div>
+                  )}
+                  {canReserve(product) && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleReserved(product.id, e)
+                      }}
+                      className="bg-white dark:bg-gray-800 rounded-full p-2 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      title={t('products.reserveTitle')}
+                    >
                       <svg
                         className="w-5 h-5 text-gray-600 dark:text-gray-300"
                         fill="none"
@@ -240,15 +283,10 @@ export default function MyProductsPage() {
                         viewBox="0 0 24 24"
                         preserveAspectRatio="xMidYMid meet"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
-                    )}
-                  </button>
+                    </button>
+                  )}
                   {/* Botó per préstec */}
                   <button
                     onClick={(e) => {
@@ -319,44 +357,70 @@ export default function MyProductsPage() {
                     />
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2">
-                    {/* Botó per reservar/desreservar */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        toggleReserved(product.id, e)
-                      }}
-                      className={`rounded-full p-2 shadow-md transition ${
-                        product.reserved
-                          ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                      title={product.reserved ? t('products.unreserveTitle') : t('products.reserveTitle')}
-                    >
-                      {product.reserved ? (
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                    {canUnreserve(product) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleReserved(product.id, e)
+                        }}
+                        className={`rounded-full p-2 shadow-md transition ${
+                          product.reserved
+                            ? isReservedByOwner(product)
+                              ? 'bg-blue-500 text-white hover:bg-blue-600'
+                              : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                        title={product.reserved ? t('products.unreserveTitle') : t('products.reserved')}
+                      >
+                        {product.reserved ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      <div
+                        className={`rounded-full p-2 shadow-md ${
+                          product.reserved
+                            ? isReservedByOwner(product)
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-yellow-500 text-white'
+                            : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                        }`}
+                        title={product.reserved ? t('products.reserved') : t('products.notReserved')}
+                      >
+                        {product.reserved ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    {canReserve(product) && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleReserved(product.id, e)
+                        }}
+                        className="rounded-full p-2 shadow-md transition bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title={t('products.reserveTitle')}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
-                      ) : (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                          />
-                        </svg>
-                      )}
-                    </button>
+                      </button>
+                    )}
                     {/* Botó per préstec */}
                     <button
                       onClick={(e) => {
