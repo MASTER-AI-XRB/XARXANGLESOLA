@@ -4,6 +4,7 @@ const next = require('next')
 const { Server } = require('socket.io')
 const { PrismaClient } = require('@prisma/client')
 const crypto = require('crypto')
+const webPush = require('web-push')
 
 const dev = process.env.NODE_ENV !== 'production'
 const isDev = dev
@@ -16,18 +17,31 @@ const socketPort = process.env.SOCKET_PORT
   ? parseInt(process.env.SOCKET_PORT, 10)
   : (dev ? 3001 : port)
 
-// Funció per obtenir la IP local
+// Funció per obtenir la IP local per accés des del telèfon (mateixa Wi‑Fi)
+// Preferim 192.168.x.x (LAN) > 10.x.x.x > altres; evitem 172.16–31.x.x (Docker/WSL) si hi ha LAN
 function getLocalIP() {
   const os = require('os')
   const interfaces = os.networkInterfaces()
+  const candidates = []
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address
+        candidates.push(iface.address)
       }
     }
   }
-  return 'localhost'
+  if (candidates.length === 0) return 'localhost'
+  const lan = candidates.find((a) => a.startsWith('192.168.'))
+  if (lan) return lan
+  const priv10 = candidates.find((a) => a.startsWith('10.'))
+  if (priv10) return priv10
+  return candidates[0]
+}
+
+function isDockerWslIP(ip) {
+  if (!ip || ip === 'localhost') return false
+  const m = ip.match(/^172\.(1[6-9]|2\d|3[01])\./)
+  return !!m
 }
 
 const app = next({ dev, hostname, port })
@@ -68,6 +82,16 @@ const logError = (message, error) => {
 }
 
 app.prepare().then(() => {
+  const vapidPublic = process.env.VAPID_PUBLIC_KEY?.trim()
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY?.trim()
+  if (vapidPublic && vapidPrivate) {
+    webPush.setVapidDetails(
+      process.env.VAPID_MAILTO || 'mailto:noreply@xarxanglesola.local',
+      vapidPublic,
+      vapidPrivate
+    )
+  }
+
   const SESSION_COOKIE = 'xarxa_session'
   const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
   const getSecret = () => {
@@ -311,6 +335,18 @@ app.prepare().then(() => {
         return true
       }
 
+      const shouldSend = await shouldSendNotification(targetUserId, {
+        notificationType,
+        actorNickname,
+        productName,
+        productType,
+      })
+      if (!shouldSend) {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true, skipped: true }))
+        return true
+      }
+
       const targetSocketId = ioInstance.sockets.sockets.get
         ? Array.from(ioInstance.sockets.sockets.keys()).find((socketId) => {
             const socket = ioInstance.sockets.sockets.get(socketId)
@@ -318,31 +354,56 @@ app.prepare().then(() => {
           })
         : null
 
-      if (!targetSocketId) {
-        res.writeHead(404, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ success: false, error: 'User not connected' }))
-        return true
-      }
-
-      const shouldSend = await shouldSendNotification(targetUserId, {
-        notificationType,
-        actorNickname,
-        productName,
-        productType,
-      })
-
-      if (!shouldSend) {
+      if (targetSocketId) {
+        ioInstance.to(targetSocketId).emit('app-notification', {
+          type,
+          title,
+          message,
+          action,
+        })
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ success: true, skipped: true }))
+        res.end(JSON.stringify({ success: true }))
         return true
       }
 
-      ioInstance.to(targetSocketId).emit('app-notification', {
-        type,
-        title,
-        message,
-        action,
+      const subs = await prisma.pushSubscription.findMany({
+        where: { userId: targetUserId },
+        select: { id: true, endpoint: true, p256dh: true, auth: true },
       })
+      const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim() ||
+        (dev ? `http://localhost:${port}` : '')
+      const rawUrl = action?.url || '/app'
+      const pushUrl = rawUrl.startsWith('http')
+        ? rawUrl
+        : (baseUrl ? baseUrl + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl) : rawUrl)
+      const pushPayload = JSON.stringify({
+        title: title || 'Xarxa Anglesola',
+        body: message || '',
+        url: pushUrl,
+        tag: 'xarxa-push-' + Date.now(),
+      })
+
+      if (vapidPublic && vapidPrivate && subs.length > 0) {
+        await Promise.all(
+          subs.map((s) => {
+            const sub = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }
+            return webPush
+              .sendNotification(sub, pushPayload)
+              .catch(async (err) => {
+                const status = err?.statusCode || err?.status
+                if (status === 410 || status === 404) {
+                  try {
+                    await prisma.pushSubscription.delete({ where: { id: s.id } })
+                  } catch (e) {
+                    logWarn('Error eliminant PushSubscription invàlida', e)
+                  }
+                } else {
+                  logWarn('Web Push send error', err)
+                }
+              })
+          })
+        )
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ success: true }))
@@ -669,6 +730,9 @@ app.prepare().then(() => {
       console.log(`> Ready on http://localhost:${port}`)
       if (dev) {
         logInfo(`> Accés des del telèfon: http://${localIP}:${port}`)
+        if (isDockerWslIP(localIP)) {
+          logInfo(`> Avís: 172.x (Docker/WSL). El mòbil a la Wi‑Fi pot no poder-hi accedir. Usa la IP de la Wi‑Fi (ipconfig, 192.168.x.x) si cal.`)
+        }
       }
       console.log(`> Socket.io disponible a http://localhost:${port}/socket.io/`)
     })

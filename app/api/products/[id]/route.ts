@@ -11,7 +11,7 @@ import {
   validateUuid,
 } from '@/lib/validation'
 import { apiError, apiOk } from '@/lib/api-response'
-import { logError } from '@/lib/logger'
+import { logError, logWarn } from '@/lib/logger'
 
 export async function GET(
   request: NextRequest,
@@ -59,9 +59,9 @@ export async function DELETE(
       return apiError('Usuari no autenticat', 401)
     }
 
-    // Comprovar que l'usuari és el propietari
     const product = await prisma.product.findUnique({
       where: { id: resolvedParams.id },
+      select: { id: true, userId: true, name: true },
     })
 
     if (!product) {
@@ -72,10 +72,78 @@ export async function DELETE(
       return apiError('No tens permisos per eliminar aquest producte', 403)
     }
 
-    // Eliminar el producte (les imatges s'eliminaran manualment si cal)
+    const notificationsEnabled =
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
+    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+    const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
+    let favorites: { userId: string }[] = []
+    let ownerNickname: string | null = null
+
+    if (notificationsEnabled && notifySecret && socketUrl && product.name) {
+      const [owner, favs] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: authUserId },
+          select: { nickname: true },
+        }),
+        prisma.favorite.findMany({
+          where: {
+            productId: resolvedParams.id,
+            userId: { not: authUserId },
+          },
+          select: { userId: true },
+        }),
+      ])
+      ownerNickname = owner?.nickname ?? null
+      favorites = favs
+    }
+
     await prisma.product.delete({
       where: { id: resolvedParams.id },
     })
+
+    if (notificationsEnabled && notifySecret && socketUrl && product.name && favorites.length > 0) {
+      try {
+        const nickname = ownerNickname ?? 'El propietari'
+        const title = 'Producte eliminat'
+        const message = `${nickname} ha eliminat un producte dels teus preferits: ${product.name}`
+        const action = { label: 'Anar a productes', url: '/app' }
+
+        await Promise.all(
+          favorites.map((fav) =>
+            fetch(`${socketUrl.replace(/\/$/, '')}/notify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-notify-token': notifySecret,
+              },
+              body: JSON.stringify({
+                targetUserId: fav.userId,
+                type: 'info',
+                title,
+                message,
+                notificationType: 'deleted_favorite',
+                actorNickname: nickname,
+                productName: product.name,
+                action,
+              }),
+            })
+              .then(async (r) => {
+                if (r.ok || r.status === 404) return
+                const d = await r.json().catch(() => ({}))
+                logWarn('Notify eliminat-preferits:', (d as { error?: string })?.error ?? r.status)
+              })
+              .catch(() => {})
+          )
+        )
+      } catch (e) {
+        if (process.env.NODE_ENV === 'production') {
+          logError('Error enviant notificacions eliminat-preferits:', e)
+        } else {
+          logWarn('No s\'han pogut enviar notificacions eliminat-preferits.', e)
+        }
+      }
+    }
 
     return apiOk({ message: 'Producte eliminat correctament' })
   } catch (error) {

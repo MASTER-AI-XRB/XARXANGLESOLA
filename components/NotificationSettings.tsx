@@ -1,9 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import { logError } from '@/lib/client-logger'
+
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
+  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(b64)
+  const out = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i)
+  return out
+}
 
 export default function NotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
@@ -116,6 +125,7 @@ export default function NotificationSettings() {
               t('notifications.notificationsEnabled') || 'Notificacions activades',
               t('notifications.notificationsEnabledMessage') || 'Ara rebràs notificacions del navegador.'
             )
+            ensurePushSubscribed()
           }
           // Si continua en 'denied' o 'default', no mostrar cap missatge
         } catch (error) {

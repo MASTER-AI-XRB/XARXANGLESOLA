@@ -573,7 +573,7 @@ export default function ProductsPage() {
                         </svg>
                       )}
                     </button>
-                  ) : (
+                  ) : nickname === product.user.nickname && canReserve(product) ? null : (
                     <div
                       className={`rounded-full p-2 shadow-md ${
                         product.reserved
@@ -743,7 +743,7 @@ export default function ProductsPage() {
                           </svg>
                         )}
                       </button>
-                    ) : (
+                    ) : nickname === product.user.nickname && canReserve(product) ? null : (
                       <div
                         className={`rounded-full p-2 shadow-md ${
                           product.reserved

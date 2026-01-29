@@ -30,7 +30,9 @@ Executa a la terminal:
 ipconfig | findstr /i "IPv4"
 ```
 
-Assegura't que la IP que obtens és la correcta (normalment comença per 192.168.x.x o 10.x.x.x)
+Assegura't que la IP que obtens és la correcta (normalment comença per **192.168.x.x** o **10.x.x.x**).
+
+**Nota:** Si el servidor mostra una IP tipus **172.18.x.x** o **172.16–31.x.x** (Docker, WSL, etc.), el telèfon a la Wi‑Fi **no hi pot accedir**. En aquests casos, cerca la IP de la teva xarxa Wi‑Fi a la sortida d’`ipconfig` (normalment «Adaptador de xarxa Wi‑Fi» → IPv4 **192.168.x.x**) i usa aquesta manualment: `http://192.168.x.x:3000`.
 
 ### 4. Provar la connexió
 Des del telèfon, prova a accedir directament:
