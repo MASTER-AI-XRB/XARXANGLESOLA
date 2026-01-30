@@ -39,12 +39,22 @@ A Railway Dashboard → Servei → Variables, afegeix:
 DATABASE_URL=postgresql://usuari:contrasenya@host:5432/nom_base_dades?schema=public
 NODE_ENV=production
 PORT=3001
+AUTH_SECRET=<el mateix que a Vercel>
+NOTIFY_SECRET=<el mateix que AUTH_SECRET o un secret per /notify>
 ```
 
 ### Variables Opcionals (recomanades):
 
 ```
 NEXT_PUBLIC_ALLOWED_ORIGINS=https://tu-app.vercel.app,https://www.tu-app.vercel.app
+NEXT_PUBLIC_APP_URL=https://tu-app.vercel.app
+```
+
+Per **notificacions amb l’app tancada** (Web Push), afegeix també:
+
+```
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
 ```
 
 **Important**: 

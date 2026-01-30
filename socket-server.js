@@ -6,9 +6,86 @@
 const { createServer } = require('http')
 const { Server } = require('socket.io')
 const { PrismaClient } = require('@prisma/client')
+const webPush = require('web-push')
+const crypto = require('crypto')
 
 const port = process.env.PORT || 3001
 const prisma = new PrismaClient()
+const dev = process.env.NODE_ENV !== 'production'
+
+const getSecret = () => {
+  const s = process.env.AUTH_SECRET
+  if (s) return s
+  return dev ? 'dev-secret-change-me' : null
+}
+const base64UrlDecode = (v) => {
+  const p = v.replace(/-/g, '+').replace(/_/g, '/')
+  const pad = (4 - (p.length % 4)) % 4
+  return Buffer.from(p + '='.repeat(pad), 'base64').toString('utf8')
+}
+const sign = (payload, secret) =>
+  crypto.createHmac('sha256', secret).update(payload).digest('base64url')
+const verifySessionToken = (token) => {
+  const secret = getSecret()
+  if (!secret || !token) return null
+  const [encoded, sig] = token.split('.')
+  if (!encoded || !sig) return null
+  const expected = sign(encoded, secret)
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null
+  } catch {
+    return null
+  }
+  const payload = JSON.parse(base64UrlDecode(encoded))
+  if (!payload?.userId || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null
+  return payload
+}
+
+const vapidPublic = process.env.VAPID_PUBLIC_KEY?.trim()
+const vapidPrivate = process.env.VAPID_PRIVATE_KEY?.trim()
+if (vapidPublic && vapidPrivate) {
+  webPush.setVapidDetails(
+    process.env.VAPID_MAILTO || 'mailto:noreply@xarxanglesola.local',
+    vapidPublic,
+    vapidPrivate
+  )
+}
+
+const parseJsonArray = (value) => {
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const shouldSendNotification = async (targetUserId, payload) => {
+  const preference = await prisma.notificationPreference.findUnique({
+    where: { userId: targetUserId },
+  })
+  if (!preference) return true
+
+  const enabledTypes = parseJsonArray(preference.enabledTypes)
+  if (payload.notificationType && enabledTypes.length > 0) {
+    const normalized = enabledTypes.map((t) => String(t).toLowerCase())
+    if (!normalized.includes(String(payload.notificationType).toLowerCase())) return false
+  }
+  if (preference.receiveAll) return true
+
+  const allowedNicknames = parseJsonArray(preference.allowedNicknames)
+    .map((n) => String(n).toLowerCase())
+    .filter(Boolean)
+  const allowedKeywords = parseJsonArray(preference.allowedProductKeywords)
+    .map((k) => String(k).toLowerCase())
+    .filter(Boolean)
+  const actorNickname = String(payload.actorNickname || '').toLowerCase()
+  const productName = String(payload.productName || payload.productType || '').toLowerCase()
+  const matchesNickname = actorNickname && allowedNicknames.includes(actorNickname)
+  const matchesKeyword = productName && allowedKeywords.some((k) => productName.includes(k))
+  return matchesNickname || matchesKeyword
+}
 
 const normalizeString = (value, maxLength) => {
   if (typeof value !== 'string') return ''
@@ -122,15 +199,29 @@ const socketUsers = new Map() // socketId -> { userId, nickname }
 const userInfo = new Map() // userId -> { nickname }
 
 io.on('connection', (socket) => {
-  const { userId, nickname } = socket.handshake.query
-  
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token
+  const payload = token ? verifySessionToken(token) : null
+  let userId = payload?.userId
+  let nickname = payload?.nickname ?? null
+  if (!userId || !nickname) {
+    const q = socket.handshake.query || {}
+    userId = userId || (typeof q.userId === 'string' ? q.userId : null)
+    nickname = nickname || (typeof q.nickname === 'string' ? q.nickname : null)
+  }
+
   console.log('=== NOVA CONNEXIÓ SOCKET.IO ===')
   console.log(`Origin: ${socket.handshake.headers.origin || 'sense origin'}`)
   console.log(`Socket ID: ${socket.id}`)
   console.log(`UserId: ${userId}`)
   console.log(`Nickname: ${nickname}`)
   console.log('================================')
-  
+
+  if (!userId || !nickname) {
+    console.warn('Connexió rebutjada: falten userId o nickname (token invàlid o no enviat)')
+    socket.disconnect(true)
+    return
+  }
+
   // Comprovar si l'usuari ja està connectat
   if (userSockets.has(userId)) {
     const existingSocketId = userSockets.get(userId)
@@ -395,7 +486,8 @@ io.on('connection', (socket) => {
 
   // Endpoint HTTP per enviar notificacions des de les API routes
   httpServer.on('request', (req, res) => {
-    // CORS headers
+    if (req.url && req.url.startsWith('/socket.io')) return
+
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-notify-token')
@@ -406,49 +498,105 @@ io.on('connection', (socket) => {
       return
     }
 
-    if (req.method === 'POST' && req.url === '/notify') {
-      const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
-      if (notifySecret) {
-        const requestToken = req.headers['x-notify-token']
-        if (requestToken !== notifySecret) {
-          res.writeHead(401, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ success: false, error: 'Unauthorized' }))
-          return
-        }
-      }
-      let body = ''
-      req.on('data', (chunk) => {
-        body += chunk.toString()
-      })
-      req.on('end', () => {
-        try {
-          const data = JSON.parse(body)
-          const { targetUserId, type, title, message, action } = data
-          const targetSocketId = userSockets.get(targetUserId)
-          if (targetSocketId) {
-            io.to(targetSocketId).emit('app-notification', {
-              type,
-              title,
-              message,
-              action,
-            })
-            res.writeHead(200, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ success: true }))
-          } else {
-            res.writeHead(404, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ success: false, error: 'User not connected' }))
-          }
-        } catch (error) {
-          res.writeHead(400, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }))
-        }
-      })
+    if (req.method !== 'POST' || req.url !== '/notify') {
+      res.writeHead(404)
+      res.end('Not found')
       return
     }
 
-    // Per a altres peticions, retornar 404
-    res.writeHead(404)
-    res.end('Not found')
+    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+    if (notifySecret) {
+      const requestToken = req.headers['x-notify-token']
+      if (requestToken !== notifySecret) {
+        res.writeHead(401, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'Unauthorized' }))
+        return
+      }
+    }
+
+    let body = ''
+    req.on('data', (chunk) => { body += chunk.toString() })
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body || '{}')
+        const {
+          targetUserId,
+          type,
+          title,
+          message,
+          action,
+          notificationType,
+          actorNickname,
+          productName,
+          productType,
+        } = data
+
+        if (!targetUserId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: false, error: 'Missing targetUserId' }))
+          return
+        }
+
+        const shouldSend = await shouldSendNotification(targetUserId, {
+          notificationType,
+          actorNickname,
+          productName,
+          productType,
+        })
+        if (!shouldSend) {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: true, skipped: true }))
+          return
+        }
+
+        const targetSocketId = userSockets.get(targetUserId)
+        if (targetSocketId) {
+          io.to(targetSocketId).emit('app-notification', { type, title, message, action })
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: true }))
+          return
+        }
+
+        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim() || (dev ? `http://localhost:3000` : '')
+        const rawUrl = action?.url || '/app'
+        const pushUrl = rawUrl.startsWith('http')
+          ? rawUrl
+          : (baseUrl ? baseUrl + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl) : rawUrl)
+        const pushPayload = JSON.stringify({
+          title: title || 'Xarxa Anglesola',
+          body: message || '',
+          url: pushUrl,
+          tag: 'xarxa-push-' + Date.now(),
+        })
+
+        const subs = await prisma.pushSubscription.findMany({
+          where: { userId: targetUserId },
+          select: { id: true, endpoint: true, p256dh: true, auth: true },
+        })
+
+        if (vapidPublic && vapidPrivate && subs.length > 0) {
+          await Promise.all(
+            subs.map((s) => {
+              const sub = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }
+              return webPush.sendNotification(sub, pushPayload).catch(async (err) => {
+                const status = err?.statusCode ?? err?.status
+                if (status === 410 || status === 404) {
+                  try {
+                    await prisma.pushSubscription.delete({ where: { id: s.id } })
+                  } catch (_) {}
+                }
+              })
+            })
+          )
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true }))
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }))
+      }
+    })
   })
 
 httpServer.listen(port, () => {

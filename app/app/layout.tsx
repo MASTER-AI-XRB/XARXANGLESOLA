@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
 import NotificationSettings from '@/components/NotificationSettings'
+import { AppSocketProvider } from '@/components/AppSocketProvider'
 import { clearStoredSession, getStoredNickname, setStoredSession } from '@/lib/client-session'
 import DevConsole from '@/components/DevConsole'
 
@@ -81,6 +82,7 @@ export default function AppLayout({
   }
 
   return (
+    <AppSocketProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -258,6 +260,7 @@ export default function AppLayout({
       <main>{children}</main>
       <DevConsole />
     </div>
+    </AppSocketProvider>
   )
 }
 

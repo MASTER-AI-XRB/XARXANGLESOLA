@@ -53,6 +53,8 @@ export default function FavoritesPage() {
 
   const isReservedByOwner = (p: Product) =>
     !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+  /** Filet groc només per als productes dels meus que estan reservats per DM (jo sóc l’amo i jo ho he reservat). */
+  const showDmFillet = (p: Product) => !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname
   const canUnreserve = (p: Product) =>
     !!p.reserved &&
     (nickname === (p.reservedBy?.nickname ?? '') ||
@@ -157,7 +159,7 @@ export default function FavoritesPage() {
                 <Link
                 key={product.id}
                 href={`/app/products/${product.id}`}
-                className="relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group"
+                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${showDmFillet(product) ? 'border-[6px] border-yellow-500' : ''}`}
               >
                 {product.images && product.images.length > 0 ? (
                   <img
@@ -245,14 +247,21 @@ export default function FavoritesPage() {
             >
               {product.images && product.images.length > 0 && (
                 <div className="h-48 bg-gray-200 dark:bg-gray-700 relative flex-shrink-0">
-                  <Link href={`/app/products/${product.id}`}>
+                  <Link href={`/app/products/${product.id}`} className="relative block w-full h-full">
                     <img
                       src={product.images[0]}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
+                    {showDmFillet(product) && (
+                      <span
+                        className="absolute inset-0 pointer-events-none block"
+                        style={{ boxShadow: 'inset 0 0 0 6px #eab308' }}
+                        aria-hidden
+                      />
+                    )}
                   </Link>
-                  <div className="absolute top-2 right-2 flex flex-col gap-2">
+                  <div className="absolute top-2 right-2 flex flex-col gap-2 z-20">
                     {product.reserved &&
                       (canUnreserve(product) ? (
                         <button

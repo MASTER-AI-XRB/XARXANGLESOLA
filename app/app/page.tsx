@@ -4,14 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { io, Socket } from 'socket.io-client'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
-import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
-import { getSocketUrl } from '@/lib/socket'
-import { getStoredNickname, getStoredSocketToken } from '@/lib/client-session'
-import { logError, logInfo, logWarn } from '@/lib/client-logger'
+import { getStoredNickname } from '@/lib/client-session'
+import { logError, logInfo } from '@/lib/client-logger'
 
 interface Product {
   id: string
@@ -33,8 +30,6 @@ export default function ProductsPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const { theme } = useTheme()
-  const { showInfo } = useNotifications()
-  const [socket, setSocket] = useState<Socket | null>(null)
   const [filters, setFilters] = useState({
     name: '',
     user: '',
@@ -58,51 +53,6 @@ export default function ProductsPage() {
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, nickname])
-
-  // Connectar a Socket.IO per rebre notificacions
-  useEffect(() => {
-    if (!nickname) return
-
-    const socketUrl = getSocketUrl()
-    if (!socketUrl) return
-    const socketToken = getStoredSocketToken()
-    if (!socketToken) {
-      logWarn('⚠️ Socket auth token absent. Torna a iniciar sessió.')
-      return
-    }
-    const newSocket = io(socketUrl, {
-      auth: { token: socketToken },
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    })
-
-    newSocket.on('connect', () => {
-      logInfo('Connectat a Socket.IO per notificacions')
-    })
-
-    // Escoltar notificacions de l'aplicació
-    newSocket.on('app-notification', (data: { type: string; title: string; message: string; action?: { label: string; url?: string } }) => {
-      showInfo(data.title, data.message, {
-        type: data.type as 'info' | 'success' | 'warning' | 'error',
-        action: data.action ? {
-          label: data.action.label,
-          onClick: () => {
-            if (data.action?.url) {
-              router.push(data.action.url)
-            }
-          }
-        } : undefined,
-      })
-    })
-
-    setSocket(newSocket)
-
-    return () => {
-      newSocket.close()
-    }
-  }, [nickname, showInfo, router])
 
   const fetchProducts = async () => {
     try {
@@ -247,6 +197,9 @@ export default function ProductsPage() {
       (nickname === p.user.nickname && !p.reservedBy))
   const isReservedByOwner = (p: Product) =>
     !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+  /** Filet groc només per a les miniatures dels meus productes reservats per DM (jo sóc l’amo i jo ho he reservat). */
+  /** Filet groc quan el producte l'ha reservat l'usuari amb la connexió activa. */
+  const showDmFillet = (p: Product) => !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname
 
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
@@ -515,7 +468,7 @@ export default function ProductsPage() {
               <Link
                 key={product.id}
                 href={`/app/products/${product.id}`}
-                className="relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group"
+                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${showDmFillet(product) ? 'border-[6px] border-yellow-500' : ''}`}
               >
                 {product.images && product.images.length > 0 ? (
                   <img
@@ -712,14 +665,21 @@ export default function ProductsPage() {
             >
               {product.images && product.images.length > 0 && (
                 <div className="h-48 bg-gray-200 dark:bg-gray-700 relative group flex-shrink-0">
-                  <Link href={`/app/products/${product.id}`}>
+                  <Link href={`/app/products/${product.id}`} className="relative block w-full h-full">
                     <img
                       src={product.images[0]}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
+                    {showDmFillet(product) && (
+                      <span
+                        className="absolute inset-0 pointer-events-none block"
+                        style={{ boxShadow: 'inset 0 0 0 6px #eab308' }}
+                        aria-hidden
+                      />
+                    )}
                   </Link>
-                  <div className="absolute top-2 right-2 flex flex-col gap-2">
+                  <div className="absolute top-2 right-2 flex flex-col gap-2 z-20">
                     {canUnreserve(product) ? (
                       <button
                         type="button"
