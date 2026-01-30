@@ -36,6 +36,8 @@
     "favorites": "Favoritos",
     "myProducts": "Mis productos",
     "chat": "Chat General",
+    "notifications": "Alertas",
+    "noNotifications": "No hay alertas nuevas",
     "hello": "¡Hola, {nickname}!",
     "logout": "Salir"
   },
@@ -54,6 +56,7 @@
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este producto?",
     "addToFavorites": "Añadir a favoritos",
     "removeFromFavorites": "Eliminar de favoritos",
+    "refresh": "Actualizar",
     "filters": {
       "name": "Nombre del producto",
       "user": "Usuario",

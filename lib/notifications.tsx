@@ -5,6 +5,15 @@ import { Notification } from '@/components/NotificationToast'
 import NotificationToast from '@/components/NotificationToast'
 import { logError } from '@/lib/client-logger'
 
+export interface NavAlert {
+  id: string
+  title: string
+  message: string
+  read: boolean
+  action?: { url: string; label?: string }
+  createdAt: number
+}
+
 interface NotificationContextType {
   showNotification: (notification: Omit<Notification, 'id'>) => void
   showInfo: (title: string, message: string, options?: Partial<Notification>) => void
@@ -12,12 +21,18 @@ interface NotificationContextType {
   showWarning: (title: string, message: string, options?: Partial<Notification>) => void
   showError: (title: string, message: string, options?: Partial<Notification>) => void
   requestPermission: () => Promise<boolean>
+  alerts: NavAlert[]
+  addAlert: (alert: Omit<NavAlert, 'id' | 'read' | 'createdAt'>) => void
+  markAlertRead: (id: string) => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
+const MAX_ALERTS = 50
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [alerts, setAlerts] = useState<NavAlert[]>([])
 
   // Demanar permís per notificacions push al carregar
   useEffect(() => {
@@ -113,6 +128,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [showNotification]
   )
 
+  const addAlert = useCallback((alert: Omit<NavAlert, 'id' | 'read' | 'createdAt'>) => {
+    const id = `alert-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const newAlert: NavAlert = {
+      ...alert,
+      id,
+      read: false,
+      createdAt: Date.now(),
+    }
+    setAlerts((prev) => [newAlert, ...prev].slice(0, MAX_ALERTS))
+  }, [])
+
+  const markAlertRead = useCallback((id: string) => {
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)))
+  }, [])
+
   return (
     <NotificationContext.Provider
       value={{
@@ -122,6 +152,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         showWarning,
         showError,
         requestPermission,
+        alerts,
+        addAlert,
+        markAlertRead,
       }}
     >
       {children}

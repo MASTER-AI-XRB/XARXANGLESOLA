@@ -33,11 +33,13 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
   const [socket, setSocket] = useState<Socket | null>(null)
   const [connected, setConnected] = useState(false)
   const router = useRouter()
-  const { showInfo } = useNotifications()
+  const { showInfo, addAlert } = useNotifications()
   const routerRef = useRef(router)
   const showInfoRef = useRef(showInfo)
+  const addAlertRef = useRef(addAlert)
   routerRef.current = router
   showInfoRef.current = showInfo
+  addAlertRef.current = addAlert
 
   useEffect(() => {
     if (!ready) {
@@ -78,6 +80,7 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
     s.on('app-notification', (data: { type?: string; title?: string; message?: string; action?: { label?: string; url?: string } }) => {
       const r = routerRef.current
       const sh = showInfoRef.current
+      const addA = addAlertRef.current
       sh(data.title ?? '', data.message ?? '', {
         type: (data.type as 'info' | 'success' | 'warning' | 'error') || 'info',
         action: data.action?.url
@@ -86,6 +89,11 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
               onClick: () => r.push(data.action!.url!),
             }
           : undefined,
+      })
+      addA({
+        title: data.title ?? '',
+        message: data.message ?? '',
+        action: data.action?.url ? { url: data.action.url, label: data.action.label } : undefined,
       })
     })
 

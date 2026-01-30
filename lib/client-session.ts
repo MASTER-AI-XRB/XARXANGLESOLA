@@ -21,3 +21,18 @@ export const clearStoredSession = () => {
   window.localStorage.removeItem('nickname')
   window.localStorage.removeItem('socketToken')
 }
+
+const VIEW_MODE_KEY = 'xarxa_products_view_mode'
+
+export type ViewMode = 'grid' | 'list'
+
+export const getStoredViewMode = (): ViewMode => {
+  if (!isBrowser) return 'list'
+  const v = window.localStorage.getItem(VIEW_MODE_KEY)
+  return v === 'grid' || v === 'list' ? v : 'list'
+}
+
+export const setStoredViewMode = (mode: ViewMode) => {
+  if (!isBrowser) return
+  window.localStorage.setItem(VIEW_MODE_KEY, mode)
+}

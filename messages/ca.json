@@ -36,6 +36,8 @@
     "favorites": "Preferits",
     "myProducts": "Els meus productes",
     "chat": "Xat General",
+    "notifications": "Alertes",
+    "noNotifications": "No hi ha alertes noves",
     "hello": "Hola, {nickname}!",
     "logout": "Sortir"
   },
@@ -54,6 +56,7 @@
     "deleteConfirm": "Estàs segur que vols eliminar aquest producte?",
     "addToFavorites": "Afegir a preferits",
     "removeFromFavorites": "Eliminar de preferits",
+    "refresh": "Actualitzar",
     "filters": {
       "name": "Nom del producte",
       "user": "Usuari",

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useI18n } from '@/lib/i18n'
 import TranslateButton from '@/components/TranslateButton'
-import { getStoredNickname } from '@/lib/client-session'
+import { getStoredNickname, getStoredViewMode, setStoredViewMode } from '@/lib/client-session'
 import { logError } from '@/lib/client-logger'
 
 interface Product {
@@ -28,6 +28,10 @@ export default function FavoritesPage() {
   const router = useRouter()
   const nickname = getStoredNickname()
   const { t } = useI18n()
+
+  useEffect(() => {
+    setViewMode(getStoredViewMode())
+  }, [])
 
   useEffect(() => {
     if (!nickname) {
@@ -104,7 +108,11 @@ export default function FavoritesPage() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('favorites.title')}</h1>
         {/* Botó per canviar vista (visible a mòbil i desktop) */}
         <button
-          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          onClick={() => {
+            const next = viewMode === 'grid' ? 'list' : 'grid'
+            setViewMode(next)
+            setStoredViewMode(next)
+          }}
           className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
           title={viewMode === 'grid' ? t('products.switchToListView') : t('products.switchToGridView')}
         >
@@ -137,6 +145,21 @@ export default function FavoritesPage() {
               />
             </svg>
           )}
+        </button>
+        <button
+          onClick={() => fetchFavorites()}
+          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          title={t('products.refresh')}
+          aria-label={t('products.refresh')}
+        >
+          <svg
+            className="w-6 h-6 text-gray-700 dark:text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
         </button>
       </div>
 
