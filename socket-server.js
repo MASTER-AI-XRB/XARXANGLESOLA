@@ -552,16 +552,24 @@ io.on('connection', (socket) => {
         const targetSocketId = userSockets.get(targetUserId)
         if (targetSocketId) {
           io.to(targetSocketId).emit('app-notification', { type, title, message, action })
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[notify] Enviat via socket per a', targetUserId)
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ success: true }))
           return
         }
 
-        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim() || (dev ? `http://localhost:3000` : '')
+        let baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim()
+        if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
+        if (!baseUrl && dev) baseUrl = 'http://localhost:3000'
         const rawUrl = action?.url || '/app'
-        const pushUrl = rawUrl.startsWith('http')
-          ? rawUrl
-          : (baseUrl ? baseUrl + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl) : rawUrl)
+        const pushUrl =
+          rawUrl.startsWith('http')
+            ? rawUrl
+            : baseUrl
+              ? baseUrl + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl)
+              : rawUrl
         const pushPayload = JSON.stringify({
           title: title || 'Xarxa Anglesola',
           body: message || '',
@@ -580,6 +588,7 @@ io.on('connection', (socket) => {
               const sub = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }
               return webPush.sendNotification(sub, pushPayload).catch(async (err) => {
                 const status = err?.statusCode ?? err?.status
+                console.error('[notify] Web Push error:', status, err?.message || err)
                 if (status === 410 || status === 404) {
                   try {
                     await prisma.pushSubscription.delete({ where: { id: s.id } })
@@ -588,6 +597,17 @@ io.on('connection', (socket) => {
               })
             })
           )
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[notify] Web Push enviat per a', targetUserId, 'subs:', subs.length)
+          }
+        } else {
+          if (!vapidPublic || !vapidPrivate) {
+            console.warn('[notify] VAPID no configurat; no s\'envia push')
+          } else if (subs.length === 0) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[notify] Cap subscripció push per a', targetUserId)
+            }
+          }
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' })

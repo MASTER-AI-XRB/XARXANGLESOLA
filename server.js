@@ -292,7 +292,13 @@ app.prepare().then(() => {
     if (!ioInstance) {
       return false
     }
-    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+    if (req.method !== 'POST' && req.method !== 'OPTIONS') {
+      return false
+    }
+    const isNotify = req.url === '/notify' || (req.url && req.url.split('?')[0] === '/notify')
+    if (!isNotify) {
+      return false
+    }
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-notify-token')
@@ -301,10 +307,6 @@ app.prepare().then(() => {
       res.writeHead(200)
       res.end()
       return true
-    }
-
-    if (req.method !== 'POST' || req.url !== '/notify') {
-      return false
     }
     if (notifySecret) {
       const requestToken = req.headers['x-notify-token']
