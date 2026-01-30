@@ -348,6 +348,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 ) : (
                   nickname && (
                     <div className="flex flex-wrap items-center gap-2">
+                      {product.prestec && (
+                        <div
+                          className="inline-flex items-center gap-2 rounded-lg bg-green-500 text-white px-3 py-2"
+                          title={t('products.prestec')}
+                        >
+                          <Image
+                            src="/prestec_on.png"
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="w-6 h-6 object-contain"
+                          />
+                          <span className="text-sm font-medium">{t('products.prestec')}</span>
+                        </div>
+                      )}
                       <Link
                         href={`/app/chat?nickname=${encodeURIComponent(product.user.nickname)}&productId=${product.id}`}
                         className="bg-blue-600 dark:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base text-center block sm:inline-block"

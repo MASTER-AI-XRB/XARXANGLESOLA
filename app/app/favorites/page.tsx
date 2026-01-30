@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
 import TranslateButton from '@/components/TranslateButton'
 import { getStoredNickname, getStoredViewMode, setStoredViewMode } from '@/lib/client-session'
@@ -58,7 +59,25 @@ export default function FavoritesPage() {
   const isReservedByOwner = (p: Product) =>
     !!p.reserved && p.reservedBy?.nickname === p.user.nickname
   /** Filet groc només per als productes dels meus que estan reservats per DM (jo sóc l’amo i jo ho he reservat). */
-  const showDmFillet = (p: Product) => !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname
+  const showOwnerReservedFillet = (p: Product) => !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+  const showDmFillet = (p: Product) =>
+    !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname && p.reservedBy?.nickname !== p.user.nickname
+  const getFilletClass = (p: Product) =>
+    p.prestec
+      ? 'border-[6px] border-green-500'
+      : showOwnerReservedFillet(p)
+        ? 'border-[6px] border-blue-500'
+        : showDmFillet(p)
+          ? 'border-[6px] border-yellow-500'
+          : ''
+  const getFilletBoxShadow = (p: Product) =>
+    p.prestec
+      ? 'inset 0 0 0 6px #22c55e'
+      : showOwnerReservedFillet(p)
+        ? 'inset 0 0 0 6px #3b82f6'
+        : showDmFillet(p)
+          ? 'inset 0 0 0 6px #eab308'
+          : ''
   const canUnreserve = (p: Product) =>
     !!p.reserved &&
     (nickname === (p.reservedBy?.nickname ?? '') ||
@@ -182,7 +201,7 @@ export default function FavoritesPage() {
                 <Link
                 key={product.id}
                 href={`/app/products/${product.id}`}
-                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${showDmFillet(product) ? 'border-[6px] border-yellow-500' : ''}`}
+                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${getFilletClass(product)}`}
               >
                 {product.images && product.images.length > 0 ? (
                   <img
@@ -235,6 +254,17 @@ export default function FavoritesPage() {
                         </svg>
                       </div>
                     ))}
+                  {product.prestec && (
+                    <div className="bg-green-500 text-white rounded-full p-2 shadow-md" title={t('products.prestec')}>
+                      <Image
+                        src="/prestec_on.png"
+                        alt={t('products.prestec')}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 object-contain"
+                      />
+                    </div>
+                  )}
                   <button
                     onClick={(e) => {
                       e.preventDefault()
@@ -276,13 +306,13 @@ export default function FavoritesPage() {
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                    {showDmFillet(product) && (
+                    {getFilletBoxShadow(product) ? (
                       <span
                         className="absolute inset-0 pointer-events-none block"
-                        style={{ boxShadow: 'inset 0 0 0 6px #eab308' }}
+                        style={{ boxShadow: getFilletBoxShadow(product) }}
                         aria-hidden
                       />
-                    )}
+                    ) : null}
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2 z-20">
                     {product.reserved &&
@@ -307,15 +337,26 @@ export default function FavoritesPage() {
                       ) : (
                         <div
                           className={`rounded-full p-2 shadow-md text-white ${
-                            isReservedByOwner(product) ? 'bg-blue-500' : 'bg-yellow-500'
+isReservedByOwner(product) ? 'bg-blue-500' : 'bg-yellow-500'
                           }`}
-                          title={t('products.reserved')}
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                          </svg>
-                        </div>
-                      ))}
+                        title={t('products.reserved')}
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      </div>
+                    ))}
+                    {product.prestec && (
+                      <div className="bg-green-500 text-white rounded-full p-2 shadow-md" title={t('products.prestec')}>
+                        <Image
+                          src="/prestec_on.png"
+                          alt={t('products.prestec')}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 object-contain"
+                        />
+                      </div>
+                    )}
                     <button
                       onClick={() => removeFavorite(product.id)}
                       className="bg-red-500 hover:bg-red-600 rounded-full p-2 shadow-md transition"

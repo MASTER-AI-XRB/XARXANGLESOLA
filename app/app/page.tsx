@@ -202,7 +202,25 @@ export default function ProductsPage() {
     !!p.reserved && p.reservedBy?.nickname === p.user.nickname
   /** Filet groc només per a les miniatures dels meus productes reservats per DM (jo sóc l’amo i jo ho he reservat). */
   /** Filet groc quan el producte l'ha reservat l'usuari amb la connexió activa. */
-  const showDmFillet = (p: Product) => !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname
+  const showOwnerReservedFillet = (p: Product) => !!p.reserved && p.reservedBy?.nickname === p.user.nickname
+  const showDmFillet = (p: Product) =>
+    !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname && p.reservedBy?.nickname !== p.user.nickname
+  const getFilletClass = (p: Product) =>
+    p.prestec
+      ? 'border-[6px] border-green-500'
+      : showOwnerReservedFillet(p)
+        ? 'border-[6px] border-blue-500'
+        : showDmFillet(p)
+          ? 'border-[6px] border-yellow-500'
+          : ''
+  const getFilletBoxShadow = (p: Product) =>
+    p.prestec
+      ? 'inset 0 0 0 6px #22c55e'
+      : showOwnerReservedFillet(p)
+        ? 'inset 0 0 0 6px #3b82f6'
+        : showDmFillet(p)
+          ? 'inset 0 0 0 6px #eab308'
+          : ''
 
   const toggleReserved = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault()
@@ -490,7 +508,7 @@ export default function ProductsPage() {
               <Link
                 key={product.id}
                 href={`/app/products/${product.id}`}
-                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${showDmFillet(product) ? 'border-[6px] border-yellow-500' : ''}`}
+                className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden group ${getFilletClass(product)}`}
               >
                 {product.images && product.images.length > 0 ? (
                   <img
@@ -570,22 +588,16 @@ export default function ProductsPage() {
                       )}
                     </div>
                   )}
-                  {product.prestec && (
+                  {/* Icona prèstec: propietari té botó (més avall); altres veuen indicador només lectura amb la mateixa icona que a la llista */}
+                  {product.user.nickname !== nickname && product.prestec && (
                     <div className="bg-green-500 text-white rounded-full p-2 shadow-md" title={t('products.prestec')}>
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 16.5V19a2 2 0 002 2h6a2 2 0 002-2v-2.5M7 16.5a2.5 2.5 0 01-2-1M7 16.5c0-.552.196-1.06.518-1.46L9.5 13.5M17 16.5a2.5 2.5 0 002-1M17 16.5c0-.552-.196-1.06-.518-1.46L14.5 13.5M7 16.5h10M9 11a3 3 0 106 0m-6 0a3 3 0 116 0m-6 0v-1a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"
-                          />
-                      </svg>
+                      <Image
+                        src="/prestec_on.png"
+                        alt={t('products.prestec')}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 object-contain"
+                      />
                     </div>
                   )}
                   {product.user.nickname === nickname ? (
@@ -693,13 +705,13 @@ export default function ProductsPage() {
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                    {showDmFillet(product) && (
+                    {getFilletBoxShadow(product) ? (
                       <span
                         className="absolute inset-0 pointer-events-none block"
-                        style={{ boxShadow: 'inset 0 0 0 6px #eab308' }}
+                        style={{ boxShadow: getFilletBoxShadow(product) }}
                         aria-hidden
                       />
-                    )}
+                    ) : null}
                   </Link>
                   <div className="absolute top-2 right-2 flex flex-col gap-2 z-20">
                     {canUnreserve(product) ? (
@@ -798,31 +810,44 @@ export default function ProductsPage() {
                         </button>
                       </>
                     ) : (
-                      <button
-                        onClick={(e) => toggleFavorite(product.id, e)}
-                        className={`rounded-full p-2 shadow-md transition ${
-                          favorites.has(product.id)
-                            ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                        data-testid={`favorite-toggle-${product.id}`}
-                        aria-label={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
-                        title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
-                      >
-                        {favorites.has(product.id) ? (
-                          <svg
-                            className="w-5 h-5 text-white fill-current"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                              clipRule="evenodd"
+                      <>
+                        {/* Indicador prèstec actiu visible per a tots els usuaris */}
+                        {product.prestec && (
+                          <div className="bg-green-500 text-white rounded-full p-2 shadow-md" title={t('products.prestec')}>
+                            <Image
+                              src="/prestec_on.png"
+                              alt={t('products.prestec')}
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 object-contain"
                             />
-                          </svg>
-                        ) : (
-                          <svg
+                          </div>
+                        )}
+                        <button
+                          onClick={(e) => toggleFavorite(product.id, e)}
+                          className={`rounded-full p-2 shadow-md transition ${
+                            favorites.has(product.id)
+                              ? 'bg-red-500 hover:bg-red-600'
+                              : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                          data-testid={`favorite-toggle-${product.id}`}
+                          aria-label={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
+                          title={favorites.has(product.id) ? t('products.removeFromFavorites') : t('products.addToFavorites')}
+                        >
+                          {favorites.has(product.id) ? (
+                            <svg
+                              className="w-5 h-5 text-white fill-current"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
                             className="w-5 h-5 text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition"
                             fill="none"
                             stroke="currentColor"
@@ -837,6 +862,7 @@ export default function ProductsPage() {
                           </svg>
                         )}
                       </button>
+                    </>
                     )}
                   </div>
                 </div>

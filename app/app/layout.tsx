@@ -101,9 +101,9 @@ export default function AppLayout({
                 />
               </div>
             </Link>
-            {/* Icones de navegació mòbil i tauleta (entre logo i tema) */}
+            {/* Icones de navegació mòbil i tauleta: amagades en horitzontal (landscape) per alliberar espai */}
             <nav
-              className="flex md:hidden flex-1 min-w-0 justify-center items-center gap-1 px-2"
+              className="flex md:hidden flex-1 min-w-0 justify-center items-center gap-1 px-2 max-md:landscape:hidden"
               aria-label="Navegació principal"
             >
               <Link
