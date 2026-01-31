@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 const NAV_ITEMS = [
@@ -42,6 +42,8 @@ function getCurrentIndex(pathname: string): number {
   return idx >= 0 ? idx : 0
 }
 
+const SCROLL_THRESHOLD = 2
+
 export function MobileNavCarousel({
   pathname,
   t,
@@ -51,13 +53,38 @@ export function MobileNavCarousel({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const currentIndex = getCurrentIndex(pathname)
+  const [canScrollPrev, setCanScrollPrev] = useState(true)
+  const [canScrollNext, setCanScrollNext] = useState(true)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollPrev(scrollLeft > SCROLL_THRESHOLD)
+    setCanScrollNext(scrollLeft < scrollWidth - clientWidth - SCROLL_THRESHOLD)
+  }, [])
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const targetScroll = currentIndex * ITEM_WIDTH
     el.scrollTo({ left: targetScroll, behavior: 'smooth' })
-  }, [currentIndex])
+    const timeoutId = setTimeout(updateScrollState, 400)
+    return () => clearTimeout(timeoutId)
+  }, [currentIndex, updateScrollState])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    updateScrollState()
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateScrollState)
+      ro.disconnect()
+    }
+  }, [updateScrollState])
 
   const scrollPrev = () => {
     const el = scrollRef.current
@@ -70,9 +97,6 @@ export function MobileNavCarousel({
     if (!el) return
     el.scrollBy({ left: ITEM_WIDTH, behavior: 'smooth' })
   }
-
-  const canScrollPrev = currentIndex > 0
-  const canScrollNext = currentIndex < NAV_ITEMS.length - 1
 
   return (
     <nav
@@ -99,7 +123,9 @@ export function MobileNavCarousel({
         <div className="flex">
           {NAV_ITEMS.map((item) => {
             const isActive =
-              (item.href === '/app' && pathname === '/app') || pathname.startsWith(item.href + '/') || pathname === item.href
+              item.href === '/app'
+                ? pathname === '/app'
+                : pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link
                 key={item.href}
