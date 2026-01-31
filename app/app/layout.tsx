@@ -104,11 +104,6 @@ export default function AppLayout({
             </Link>
             {/* Carrussel de navegació mòbil i tauleta: fletxes + scroll tàctil */}
             <MobileNavCarousel pathname={pathname} t={t} />
-            {/* Selector d'idioma i tema mòbil */}
-            <div className="sm:hidden flex items-center gap-1 shrink-0">
-              <ThemeToggle />
-              <LanguageSelector />
-            </div>
             {/* Menú desktop: icones repartides entre logo i tema */}
             <nav
               className="hidden md:flex flex-1 min-w-0 justify-evenly items-center gap-1 px-6"
@@ -166,12 +161,12 @@ export default function AppLayout({
                   </svg>
               </Link>
             </nav>
-            <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
-              <div className="hidden sm:flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <ThemeToggle />
                 <LanguageSelector />
               </div>
-              <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{t('nav.hello', { nickname })}</span>
+              <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{t('nav.hello', { nickname })}</span>
               <NavNotificationsBell />
               <button
                 onClick={handleLogout}
