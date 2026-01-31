@@ -87,17 +87,17 @@ export default function AppLayout({
     <AppSocketProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center gap-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center gap-2 md:gap-4">
             {/* Logo */}
             <Link href="/app" className="flex items-center shrink-0">
-              <div className="rounded-full overflow-hidden p-1">
+              <div className="rounded-full overflow-hidden p-0.5 sm:p-1">
                 <Image
                   src="/xarxa_logo.jpg"
                   alt="Xarxa Anglesola"
                   width={40}
                   height={40}
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover"
+                  className="h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full object-cover"
                   priority
                 />
               </div>
@@ -166,7 +166,7 @@ export default function AppLayout({
                 <ThemeToggle />
                 <LanguageSelector />
               </div>
-              <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{t('nav.hello', { nickname })}</span>
+              <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[70px] sm:max-w-[100px] md:max-w-none">{t('nav.hello', { nickname })}</span>
               <NavNotificationsBell />
               <button
                 onClick={handleLogout}

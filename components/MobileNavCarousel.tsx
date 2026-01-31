@@ -76,23 +76,24 @@ export function MobileNavCarousel({
 
   return (
     <nav
-      className="flex md:hidden flex-1 min-w-0 items-center gap-0 px-1 max-md:landscape:hidden"
+      className="flex md:hidden flex-1 min-w-0 items-center gap-0 px-0 max-md:landscape:hidden min-w-[107px] w-[180px]"
       aria-label="Navegació principal"
     >
       <button
         type="button"
         onClick={scrollPrev}
         disabled={!canScrollPrev}
-        className="shrink-0 rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
+        title={canScrollPrev ? t('common.previous') : undefined}
+        className="relative z-20 shrink-0 rounded-lg p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
         aria-label="Anterior"
       >
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
       </button>
       <div
         ref={scrollRef}
-        className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory [-webkit-overflow-scrolling:touch] scrollbar-hide"
+        className="relative z-0 flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory [-webkit-overflow-scrolling:touch] scrollbar-hide touch-pan-x"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <div className="flex">
@@ -103,7 +104,7 @@ export function MobileNavCarousel({
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex shrink-0 snap-center items-center justify-center rounded-lg p-3 transition w-12 h-12 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex shrink-0 snap-center items-center justify-center rounded-lg p-2 sm:p-3 transition w-11 h-11 sm:w-12 sm:h-12 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-current={isActive ? 'page' : undefined}
                 title={t(item.titleKey)}
                 aria-label={t(item.titleKey)}
@@ -126,10 +127,11 @@ export function MobileNavCarousel({
         type="button"
         onClick={scrollNext}
         disabled={!canScrollNext}
-        className="shrink-0 rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
+        title={canScrollNext ? t('common.next') : undefined}
+        className="relative z-20 shrink-0 rounded-lg p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
         aria-label="Següent"
       >
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
