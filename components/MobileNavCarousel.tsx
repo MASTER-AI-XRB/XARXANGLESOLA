@@ -84,10 +84,10 @@ export function MobileNavCarousel({
         onClick={scrollPrev}
         disabled={!canScrollPrev}
         title={canScrollPrev ? t('common.previous') : undefined}
-        className="relative z-20 shrink-0 rounded-lg p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
+        className="relative z-30 shrink-0 rounded-lg px-0 py-1.5 sm:py-2 w-[20px] min-h-[44px] flex items-center justify-center overflow-visible touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
         aria-label="Anterior"
       >
-        <svg className="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
       </button>
@@ -128,10 +128,10 @@ export function MobileNavCarousel({
         onClick={scrollNext}
         disabled={!canScrollNext}
         title={canScrollNext ? t('common.next') : undefined}
-        className="relative z-20 shrink-0 rounded-lg p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
+        className="relative z-20 shrink-0 rounded-lg px-0 py-1.5 sm:py-2 w-[20px] min-h-[44px] flex items-center justify-center overflow-visible touch-manipulation text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:dark:hover:text-gray-400 transition"
         aria-label="Següent"
       >
-        <svg className="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
