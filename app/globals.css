@@ -122,3 +122,12 @@ input[type="date"]#filter-date-from {
   animation: logo-idle-reverse 25s ease-in-out infinite;
 }
 
+/* Amagar scrollbar mantenint el scroll tàctil (carrusel mòbil) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
