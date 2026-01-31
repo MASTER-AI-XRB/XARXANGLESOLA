@@ -100,7 +100,7 @@ export function MobileNavCarousel({
 
   return (
     <nav
-      className="flex md:hidden flex-1 min-w-0 items-center gap-0 px-0 max-md:landscape:hidden min-w-[107px] w-[180px]"
+      className="flex md:hidden flex-1 min-w-0 items-center gap-0 px-0 max-md:landscape:hidden min-w-[88px] w-[88px]"
       aria-label="Navegació principal"
     >
       <button
@@ -117,8 +117,8 @@ export function MobileNavCarousel({
       </button>
       <div
         ref={scrollRef}
-        className="relative z-0 flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory [-webkit-overflow-scrolling:touch] scrollbar-hide touch-pan-x"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="relative z-0 flex shrink-0 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory [-webkit-overflow-scrolling:touch] scrollbar-hide touch-pan-x"
+        style={{ width: ITEM_WIDTH, minWidth: ITEM_WIDTH, scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <div className="flex">
           {NAV_ITEMS.map((item) => {
