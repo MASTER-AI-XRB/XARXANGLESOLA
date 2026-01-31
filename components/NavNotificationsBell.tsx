@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNotifications } from '@/lib/notifications'
 import { useI18n } from '@/lib/i18n'
+import NotificationSettings from '@/components/NotificationSettings'
 
 export function NavNotificationsBell() {
   const [open, setOpen] = useState(false)
@@ -108,6 +109,9 @@ export function NavNotificationsBell() {
                 ))}
               </ul>
             )}
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/80 shrink-0">
+            <NotificationSettings embedded />
           </div>
         </div>
       )}

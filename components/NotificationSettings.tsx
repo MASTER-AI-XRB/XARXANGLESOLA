@@ -14,7 +14,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return out
 }
 
-export default function NotificationSettings() {
+export default function NotificationSettings({ embedded }: { embedded?: boolean } = {}) {
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [showDisableModal, setShowDisableModal] = useState(false)
   const [showEnableModal, setShowEnableModal] = useState(false)
@@ -180,7 +180,9 @@ export default function NotificationSettings() {
 
   return (
     <>
-      <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
+      <div
+        className={`flex items-center gap-2 ${embedded ? 'px-0 py-0' : 'border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1'}`}
+      >
         <button
           onClick={handleToggleNotifications}
           className={`transition ${

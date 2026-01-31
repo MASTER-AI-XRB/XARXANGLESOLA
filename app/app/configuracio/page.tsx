@@ -8,8 +8,6 @@ import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import { clearStoredSession } from '@/lib/client-session'
 import { APP_VERSION } from '@/lib/version'
-import NotificationSettings from '@/components/NotificationSettings'
-
 export default function ConfiguracioPage() {
   const [linkedProviders, setLinkedProviders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,13 +133,6 @@ export default function ConfiguracioPage() {
       <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
         {t('config.title')}
       </h1>
-
-      <section className="mb-8">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          {t('notifications.preferencesTitle')}
-        </h2>
-        <NotificationSettings />
-      </section>
 
       <section>
         <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">

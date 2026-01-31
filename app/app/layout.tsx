@@ -8,7 +8,6 @@ import { signOut, useSession } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n'
 import LanguageSelector from '@/components/LanguageSelector'
 import ThemeToggle from '@/components/ThemeToggle'
-import NotificationSettings from '@/components/NotificationSettings'
 import { AppSocketProvider } from '@/components/AppSocketProvider'
 import { clearStoredSession, getStoredNickname, setStoredSession } from '@/lib/client-session'
 import DevConsole from '@/components/DevConsole'
@@ -251,9 +250,6 @@ export default function AppLayout({
                   </svg>
                   {t('nav.settings')}
                 </Link>
-                <div className="px-3 py-2">
-                  <NotificationSettings />
-                </div>
               </div>
             </div>
           )}
