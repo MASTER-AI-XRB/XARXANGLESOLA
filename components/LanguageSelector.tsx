@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
@@ -11,6 +11,8 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
   const { theme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
@@ -34,7 +36,15 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
       {/* Versió mòbil: botó amb icona */}
       <div className={forceMobile ? "relative" : "sm:hidden relative"}>
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
+          ref={buttonRef}
+          onClick={() => {
+            if (!mobileOpen && buttonRef.current && isMobile) {
+              const rect = buttonRef.current.getBoundingClientRect()
+              setAnchorRect({ bottom: rect.bottom, right: rect.right })
+            }
+            if (mobileOpen) setAnchorRect(null)
+            setMobileOpen(!mobileOpen)
+          }}
           className="flex items-center gap-1 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
           title={currentLanguage.name}
         >
@@ -48,20 +58,30 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
         </button>
         {mobileOpen && (
           <>
-            {isMobile && typeof document !== 'undefined' ? (
+            {isMobile && typeof document !== 'undefined' && anchorRect ? (
               createPortal(
                 <>
                   <div
                     className="fixed inset-0 z-[55]"
-                    onClick={() => setMobileOpen(false)}
+                    onClick={() => {
+                      setMobileOpen(false)
+                      setAnchorRect(null)
+                    }}
                     aria-hidden
                   />
-                  <div className="fixed right-0 top-16 z-[60] mt-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]">
+                  <div
+                    className="fixed z-[60] mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]"
+                    style={{
+                      top: anchorRect.bottom + 8,
+                      right: typeof window !== 'undefined' ? window.innerWidth - anchorRect.right : 0,
+                    }}
+                  >
                     {languages.map((lang) => (
                       <button
                         key={lang.code}
                         onClick={() => {
                           setLocale(lang.code)
+                          setAnchorRect(null)
                           setMobileOpen(false)
                         }}
                         className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition ${

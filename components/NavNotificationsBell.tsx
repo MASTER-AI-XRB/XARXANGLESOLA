@@ -10,6 +10,7 @@ import NotificationSettings from '@/components/NotificationSettings'
 export function NavNotificationsBell() {
   const [open, setOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const { alerts, markAlertRead } = useNotifications()
@@ -36,6 +37,7 @@ export function NavNotificationsBell() {
         !buttonRef.current.contains(e.target as Node)
       ) {
         setOpen(false)
+        setAnchorRect(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -45,6 +47,7 @@ export function NavNotificationsBell() {
   const handleAlertClick = (id: string, url?: string) => {
     markAlertRead(id)
     setOpen(false)
+        setAnchorRect(null)
     if (url) router.push(url)
   }
 
@@ -53,7 +56,14 @@ export function NavNotificationsBell() {
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open && buttonRef.current && isMobile) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setAnchorRect({ bottom: rect.bottom, right: rect.right })
+          }
+          if (open) setAnchorRect(null)
+          setOpen(!open)
+        }}
         className="relative p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
         title={t('nav.notifications')}
         aria-label={t('nav.notifications')}
@@ -79,9 +89,17 @@ export function NavNotificationsBell() {
           <div
             ref={panelRef}
             className={
-              isMobile && typeof document !== 'undefined'
-                ? 'fixed right-0 top-16 z-[60] mt-0 w-80 max-w-[calc(100vw-0px)] max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
+              isMobile && typeof document !== 'undefined' && anchorRect
+                ? 'fixed z-[60] mt-2 w-80 max-w-[calc(100vw-1rem)] max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
                 : 'absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col'
+            }
+            style={
+              isMobile && anchorRect && typeof window !== 'undefined'
+                ? {
+                    top: anchorRect.bottom + 8,
+                    right: window.innerWidth - anchorRect.right,
+                  }
+                : undefined
             }
           >
             <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
@@ -130,7 +148,7 @@ export function NavNotificationsBell() {
             </div>
           </div>
         )
-        return isMobile && typeof document !== 'undefined'
+        return isMobile && typeof document !== 'undefined' && anchorRect
           ? createPortal(panelContent, document.body)
           : panelContent
       })()}
