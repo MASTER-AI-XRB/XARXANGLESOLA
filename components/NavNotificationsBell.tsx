@@ -7,10 +7,12 @@ import { useNotifications } from '@/lib/notifications'
 import { useI18n } from '@/lib/i18n'
 import NotificationSettings from '@/components/NotificationSettings'
 
+const DROPDOWN_GAP = 4
+
 export function NavNotificationsBell() {
   const [open, setOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; left: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const { alerts, markAlertRead } = useNotifications()
@@ -59,7 +61,7 @@ export function NavNotificationsBell() {
         onClick={() => {
           if (!open && buttonRef.current && isMobile) {
             const rect = buttonRef.current.getBoundingClientRect()
-            setAnchorRect({ bottom: rect.bottom, right: rect.right })
+            setAnchorRect({ bottom: rect.bottom, left: rect.left })
           }
           if (open) setAnchorRect(null)
           setOpen(!open)
@@ -96,8 +98,8 @@ export function NavNotificationsBell() {
             style={
               isMobile && anchorRect && typeof window !== 'undefined'
                 ? {
-                    top: anchorRect.bottom,
-                    right: window.innerWidth - anchorRect.right,
+                    top: anchorRect.bottom + DROPDOWN_GAP,
+                    left: anchorRect.left,
                   }
                 : undefined
             }

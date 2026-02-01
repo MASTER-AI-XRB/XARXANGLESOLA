@@ -21,9 +21,13 @@ function getOnboardingSeen(): boolean {
   return !!window.localStorage.getItem(ONBOARDING_KEY)
 }
 
+const DROPDOWN_GAP = 4
+
 export function AppInfoPopup() {
   const [open, setOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; left: number } | null>(null)
   const [buttonRect, setButtonRect] = useState<{ x: number; y: number; r: number } | null>(null)
   const [windowSize, setWindowSize] = useState({ w: 0, h: 0 })
   const panelRef = useRef<HTMLDivElement>(null)
@@ -32,6 +36,14 @@ export function AppInfoPopup() {
 
   useEffect(() => {
     setShowOnboarding(!getOnboardingSeen())
+  }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
   }, [])
 
   useEffect(() => {
@@ -151,7 +163,14 @@ export function AppInfoPopup() {
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (!open && buttonRef.current && isMobile) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setAnchorRect({ bottom: rect.bottom, left: rect.left })
+          }
+          if (open) setAnchorRect(null)
+          setOpen((prev) => !prev)
+        }}
         className="relative z-[50] p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
         title={t('info.title')}
         aria-label={t('info.title')}
@@ -173,11 +192,24 @@ export function AppInfoPopup() {
         </svg>
       </button>
       {typeof document !== 'undefined' && onboardingOverlay && createPortal(onboardingOverlay, document.body)}
-      {open && (
-        <div
-          ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-[min(90vw,22rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:max-w-[calc(100vw-2rem)]"
-        >
+      {open && (() => {
+        const panelContent = (
+          <div
+            ref={panelRef}
+            className={
+              isMobile && typeof document !== 'undefined' && anchorRect
+                ? 'fixed z-[60] w-[min(90vw,22rem)] max-w-[calc(100vw-1rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
+                : 'absolute right-0 top-full mt-2 w-[min(90vw,22rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col'
+            }
+            style={
+              isMobile && anchorRect && typeof window !== 'undefined'
+                ? {
+                    top: anchorRect.bottom + DROPDOWN_GAP,
+                    left: anchorRect.left,
+                  }
+                : undefined
+            }
+          >
           <div className="px-4 py-3 border-b dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 shrink-0">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
               {t('info.title')}
@@ -211,7 +243,11 @@ export function AppInfoPopup() {
           </button>
           </div>
         </div>
-      )}
+        )
+        return isMobile && typeof document !== 'undefined' && anchorRect
+          ? createPortal(panelContent, document.body)
+          : panelContent
+      })()}
     </div>
   )
 }

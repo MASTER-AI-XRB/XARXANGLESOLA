@@ -11,8 +11,9 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
   const { theme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; left: number } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const DROPDOWN_GAP = 4
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
@@ -40,7 +41,7 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
           onClick={() => {
             if (!mobileOpen && buttonRef.current && isMobile) {
               const rect = buttonRef.current.getBoundingClientRect()
-              setAnchorRect({ bottom: rect.bottom, right: rect.right })
+              setAnchorRect({ bottom: rect.bottom, left: rect.left })
             }
             if (mobileOpen) setAnchorRect(null)
             setMobileOpen(!mobileOpen)
@@ -72,8 +73,8 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
                   <div
                     className="fixed z-[60] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]"
                     style={{
-                      top: anchorRect.bottom,
-                      right: typeof window !== 'undefined' ? window.innerWidth - anchorRect.right : 0,
+                      top: anchorRect.bottom + DROPDOWN_GAP,
+                      left: anchorRect.left,
                     }}
                   >
                     {languages.map((lang) => (
