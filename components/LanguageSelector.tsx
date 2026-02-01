@@ -70,9 +70,9 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
                     aria-hidden
                   />
                   <div
-                    className="fixed z-[60] mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]"
+                    className="fixed z-[60] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]"
                     style={{
-                      top: anchorRect.bottom + 8,
+                      top: anchorRect.bottom,
                       right: typeof window !== 'undefined' ? window.innerWidth - anchorRect.right : 0,
                     }}
                   >

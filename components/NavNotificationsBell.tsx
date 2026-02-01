@@ -90,13 +90,13 @@ export function NavNotificationsBell() {
             ref={panelRef}
             className={
               isMobile && typeof document !== 'undefined' && anchorRect
-                ? 'fixed z-[60] mt-2 w-80 max-w-[calc(100vw-1rem)] max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
+                ? 'fixed z-[60] w-80 max-w-[calc(100vw-1rem)] max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
                 : 'absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col'
             }
             style={
               isMobile && anchorRect && typeof window !== 'undefined'
                 ? {
-                    top: anchorRect.bottom + 8,
+                    top: anchorRect.bottom,
                     right: window.innerWidth - anchorRect.right,
                   }
                 : undefined
