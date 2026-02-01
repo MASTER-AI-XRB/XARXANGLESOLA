@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { useNotifications } from '@/lib/notifications'
 import { useI18n } from '@/lib/i18n'
@@ -8,6 +9,7 @@ import NotificationSettings from '@/components/NotificationSettings'
 
 export function NavNotificationsBell() {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const { alerts, markAlertRead } = useNotifications()
@@ -15,6 +17,14 @@ export function NavNotificationsBell() {
   const { t } = useI18n()
 
   const unreadCount = alerts.filter((a) => !a.read).length
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -64,57 +74,66 @@ export function NavNotificationsBell() {
           />
         )}
       </button>
-      {open && (
-        <div
-          ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:mt-0 max-md:max-w-[calc(100vw-2rem)] max-md:z-[60]"
-        >
-          <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-              {t('nav.notifications')}
-            </h3>
-          </div>
-          <div className="overflow-y-auto flex-1 min-h-0">
-            {alerts.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('nav.noNotifications')}
-              </p>
-            ) : (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                {alerts.map((alert) => (
-                  <li key={alert.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleAlertClick(alert.id, alert.action?.url)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
-                    >
-                      <p
-                        className={`text-sm ${
-                          alert.read
-                            ? 'text-gray-700 dark:text-gray-300 font-normal'
-                            : 'text-gray-900 dark:text-white font-semibold'
-                        }`}
+      {open && (() => {
+        const panelContent = (
+          <div
+            ref={panelRef}
+            className={
+              isMobile && typeof document !== 'undefined'
+                ? 'fixed right-0 top-16 z-[60] mt-0 w-80 max-w-[calc(100vw-0px)] max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
+                : 'absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col'
+            }
+          >
+            <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('nav.notifications')}
+              </h3>
+            </div>
+            <div className="overflow-y-auto flex-1 min-h-0">
+              {alerts.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {t('nav.noNotifications')}
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {alerts.map((alert) => (
+                    <li key={alert.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleAlertClick(alert.id, alert.action?.url)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
                       >
-                        {alert.title}
-                      </p>
-                      <p
-                        className={`text-xs mt-0.5 line-clamp-2 ${
-                          alert.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {alert.message}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                        <p
+                          className={`text-sm ${
+                            alert.read
+                              ? 'text-gray-700 dark:text-gray-300 font-normal'
+                              : 'text-gray-900 dark:text-white font-semibold'
+                          }`}
+                        >
+                          {alert.title}
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 line-clamp-2 ${
+                            alert.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
+                          }`}
+                        >
+                          {alert.message}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/80 shrink-0">
+              <NotificationSettings embedded />
+            </div>
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/80 shrink-0">
-            <NotificationSettings embedded />
-          </div>
-        </div>
-      )}
+        )
+        return isMobile && typeof document !== 'undefined'
+          ? createPortal(panelContent, document.body)
+          : panelContent
+      })()}
     </div>
   )
 }

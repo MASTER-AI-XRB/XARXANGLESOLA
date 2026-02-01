@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import Image from 'next/image'
@@ -9,6 +10,15 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
   const { locale, setLocale } = useI18n()
   const { theme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const languages = [
     { code: 'ca' as const, name: 'Català'},
@@ -38,28 +48,62 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
         </button>
         {mobileOpen && (
           <>
-            <div 
-              className="fixed inset-0 z-[55]" 
-              onClick={() => setMobileOpen(false)}
-            />
-            <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 z-20 min-w-[120px] max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:mt-0 max-md:z-[60]">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => {
-                    setLocale(lang.code)
-                    setMobileOpen(false)
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
-                    locale === lang.code ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium' : 'text-gray-700 dark:text-gray-300'
-                  } ${lang.code === languages[0].code ? 'rounded-t-md' : ''} ${
-                    lang.code === languages[languages.length - 1].code ? 'rounded-b-md' : ''
-                  }`}
-                >
-                  {lang.name}
-                </button>
-              ))}
-            </div>
+            {isMobile && typeof document !== 'undefined' ? (
+              createPortal(
+                <>
+                  <div
+                    className="fixed inset-0 z-[55]"
+                    onClick={() => setMobileOpen(false)}
+                    aria-hidden
+                  />
+                  <div className="fixed right-0 top-16 z-[60] mt-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 min-w-[120px]">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          setLocale(lang.code)
+                          setMobileOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+                          locale === lang.code ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        } ${lang.code === languages[0].code ? 'rounded-t-md' : ''} ${
+                          lang.code === languages[languages.length - 1].code ? 'rounded-b-md' : ''
+                        }`}
+                      >
+                        {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                </>,
+                document.body
+              )
+            ) : (
+              <>
+                <div
+                  className="fixed inset-0 z-[55]"
+                  onClick={() => setMobileOpen(false)}
+                  aria-hidden
+                />
+                <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 z-20 min-w-[120px]">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setLocale(lang.code)
+                        setMobileOpen(false)
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+                        locale === lang.code ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium' : 'text-gray-700 dark:text-gray-300'
+                      } ${lang.code === languages[0].code ? 'rounded-t-md' : ''} ${
+                        lang.code === languages[languages.length - 1].code ? 'rounded-b-md' : ''
+                      }`}
+                    >
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

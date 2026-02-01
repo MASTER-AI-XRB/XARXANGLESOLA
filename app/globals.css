@@ -122,13 +122,13 @@ input[type="date"]#filter-date-from {
   animation: logo-idle-reverse 25s ease-in-out infinite;
 }
 
-/* Rotació d'una volta sencera per la icona de refresh (fletxes) */
+/* Rotació d'una volta sencera per la icona de refresh (fletxes, sentit antihorari) */
 @keyframes refresh-spin {
   from {
     transform: rotate(0deg);
   }
   to {
-    transform: rotate(360deg);
+    transform: rotate(-360deg);
   }
 }
 
