@@ -39,10 +39,10 @@ export default function LanguageSelector({ forceMobile = false }: { forceMobile?
         {mobileOpen && (
           <>
             <div 
-              className="fixed inset-0 z-10" 
+              className="fixed inset-0 z-[55]" 
               onClick={() => setMobileOpen(false)}
             />
-            <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 z-20 min-w-[120px]">
+            <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg dark:shadow-gray-900 z-20 min-w-[120px] max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:mt-0 max-md:z-[60]">
               {languages.map((lang) => (
                 <button
                   key={lang.code}

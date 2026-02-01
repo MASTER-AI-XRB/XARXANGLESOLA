@@ -67,7 +67,7 @@ export function NavNotificationsBell() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:max-w-[calc(100vw-2rem)]"
+          className="absolute right-0 top-full mt-2 w-80 max-h-[min(70vh,24rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:mt-0 max-md:max-w-[calc(100vw-2rem)] max-md:z-[60]"
         >
           <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
