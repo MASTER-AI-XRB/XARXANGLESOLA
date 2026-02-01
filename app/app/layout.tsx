@@ -12,6 +12,7 @@ import { AppSocketProvider } from '@/components/AppSocketProvider'
 import { clearStoredSession, getStoredNickname, setStoredSession } from '@/lib/client-session'
 import DevConsole from '@/components/DevConsole'
 import { NavNotificationsBell } from '@/components/NavNotificationsBell'
+import { AppInfoPopup } from '@/components/AppInfoPopup'
 import { MobileNavCarousel } from '@/components/MobileNavCarousel'
 
 export default function AppLayout({
@@ -164,6 +165,7 @@ export default function AppLayout({
               <div className="flex items-center gap-1 shrink-0">
                 <ThemeToggle />
                 <LanguageSelector />
+                <AppInfoPopup />
               </div>
               <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[70px] sm:max-w-[100px] md:max-w-none">{t('nav.hello', { nickname })}</span>
               <NavNotificationsBell />

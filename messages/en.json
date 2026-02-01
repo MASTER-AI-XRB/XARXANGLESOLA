@@ -31,6 +31,24 @@
     "or": "or",
     "continueWithGoogle": "Continue with Google"
   },
+  "info": {
+    "title": "How does the Network work?",
+    "intro": "Xarxa Anglesola is a space to share and borrow things between neighbours. Here's everything you can do:",
+    "productsTitle": "📦 Browse products",
+    "productsDesc": "Take a look at what people are sharing. Bikes, books, tools... whatever you need!",
+    "favoritesTitle": "❤️ Save to favourites",
+    "favoritesDesc": "See something you like? Add it to your favourites so you can find it later without losing it.",
+    "myProductsTitle": "✨ Publish yours",
+    "myProductsDesc": "Got something you don't use? Publish it! Others can borrow it from you.",
+    "reserveTitle": "📌 Reserve",
+    "reserveDesc": "Want to borrow something? Reserve it and get in touch with the person who published it to arrange a handover.",
+    "chatTitle": "💬 Chat",
+    "chatDesc": "Talk in the general chat or privately with someone who published a product. Great for coordinating handovers.",
+    "notificationsTitle": "🔔 Notifications",
+    "notificationsDesc": "Turn on alerts in the bell icon to know when someone reserves your item, messages you, or adds it to their favourites.",
+    "settingsTitle": "⚙️ Settings",
+    "settingsDesc": "Manage your account, notification preferences, and your data from here."
+  },
   "nav": {
     "products": "Products",
     "favorites": "Favorites",

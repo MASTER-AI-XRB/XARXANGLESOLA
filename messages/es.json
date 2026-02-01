@@ -31,6 +31,24 @@
     "or": "o",
     "continueWithGoogle": "Continuar con Google"
   },
+  "info": {
+    "title": "¿Cómo funciona la Red?",
+    "intro": "La Xarxa Anglesola es un espacio para compartir y pedir cosas en préstamo entre vecinos. Aquí tienes todo lo que puedes hacer:",
+    "productsTitle": "📦 Ver productos",
+    "productsDesc": "Echa un vistazo a lo que la gente pone a disposición. Bicis, libros, herramientas... ¡lo que necesites!",
+    "favoritesTitle": "❤️ Guardar en favoritos",
+    "favoritesDesc": "¿Algo te hace gracia? Añádelo a favoritos para encontrarlo después sin perderlo.",
+    "myProductsTitle": "✨ Publicar los tuyos",
+    "myProductsDesc": "¿Tienes algo que no usas? ¡Publícalo! Así otros pueden pedírtelo en préstamo.",
+    "reserveTitle": "📌 Reservar",
+    "reserveDesc": "¿Quieres coger algo en préstamo? Resérvalo y contacta con quien lo publicó para quedar.",
+    "chatTitle": "💬 Chatear",
+    "chatDesc": "Hablar en el chat general o en privado con quien publica un producto. Ideal para coordinar entregas.",
+    "notificationsTitle": "🔔 Notificaciones",
+    "notificationsDesc": "Activa las alertas en la campana para saber cuando te reservan algo, te escriben o añaden a favoritos.",
+    "settingsTitle": "⚙️ Configuración",
+    "settingsDesc": "Desde aquí gestionas tu cuenta, las preferencias de notificaciones y tus datos."
+  },
   "nav": {
     "products": "Productos",
     "favorites": "Favoritos",
