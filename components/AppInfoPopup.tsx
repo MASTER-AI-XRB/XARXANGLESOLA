@@ -22,6 +22,8 @@ function getOnboardingSeen(): boolean {
 }
 
 const DROPDOWN_GAP = 4
+const MOBILE_LEFT_MARGIN = 8 // 0.5rem, marge mínim per no tallar per l'esquerra
+const INFO_PANEL_MAX_WIDTH_PX = 352 // 22rem
 
 export function AppInfoPopup() {
   const [open, setOpen] = useState(false)
@@ -203,10 +205,15 @@ export function AppInfoPopup() {
             }
             style={
               isMobile && anchorRect && typeof window !== 'undefined'
-                ? {
-                    top: anchorRect.bottom + DROPDOWN_GAP,
-                    right: window.innerWidth - anchorRect.right,
-                  }
+                ? (() => {
+                    const w = Math.min(window.innerWidth * 0.9, INFO_PANEL_MAX_WIDTH_PX)
+                    const rightAligned = window.innerWidth - anchorRect.right
+                    const rightSoLeftMargin = window.innerWidth - MOBILE_LEFT_MARGIN - w
+                    return {
+                      top: anchorRect.bottom + DROPDOWN_GAP,
+                      right: Math.min(rightAligned, rightSoLeftMargin),
+                    }
+                  })()
                 : undefined
             }
           >
