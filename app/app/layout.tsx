@@ -176,7 +176,7 @@ export default function AppLayout({
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500 text-white hover:bg-red-600 transition shrink-0"
+                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-red-500 text-white hover:bg-red-600 transition shrink-0"
                 title={t('nav.logout')}
                 aria-label={t('nav.logout')}
               >
@@ -203,10 +203,21 @@ export default function AppLayout({
           {/* Menú mòbil */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t dark:border-gray-700 py-4">
-              <div className="flex items-center justify-center gap-2 px-3 pb-3 mb-2 border-b dark:border-gray-700">
+              <div className="flex items-center gap-2 px-3 pb-3 mb-2 border-b dark:border-gray-700">
                 <ThemeToggle />
                 <LanguageSelector />
                 <NavNotificationsBell />
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    handleLogout()
+                  }}
+                  className="ml-auto flex items-center justify-center w-9 h-9 rounded-full bg-red-500 text-white hover:bg-red-600 transition shrink-0"
+                  title={t('nav.logout')}
+                  aria-label={t('nav.logout')}
+                >
+                  <span className="text-lg leading-none" aria-hidden>⏻</span>
+                </button>
               </div>
               <div className="flex flex-col space-y-2">
                 <Link
