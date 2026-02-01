@@ -40,6 +40,7 @@ export default function ProductsPage() {
     dateTo: '',
   })
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [refreshSpinning, setRefreshSpinning] = useState(false)
   const router = useRouter()
   const nickname = getStoredNickname()
   const { t } = useI18n()
@@ -352,13 +353,18 @@ export default function ProductsPage() {
             )}
           </button>
           <button
-            onClick={() => fetchProducts()}
+            onClick={() => {
+              setRefreshSpinning(true)
+              refreshProducts().finally(() => {
+                setTimeout(() => setRefreshSpinning(false), 500)
+              })
+            }}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             title={t('products.refresh')}
             aria-label={t('products.refresh')}
           >
             <svg
-              className="w-6 h-6 text-gray-700 dark:text-gray-300"
+              className={`w-6 h-6 text-gray-700 dark:text-gray-300 inline-block ${refreshSpinning ? 'animate-refresh-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

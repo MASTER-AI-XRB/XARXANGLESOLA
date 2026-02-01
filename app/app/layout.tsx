@@ -102,6 +102,10 @@ export default function AppLayout({
                 />
               </div>
             </Link>
+            {/* Missatge de benvinguda a l'esquerra, sempre visible */}
+            <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm shrink-0 whitespace-nowrap ml-1">
+              {t('nav.hello', { nickname })}
+            </span>
             {/* Carrussel de navegació mòbil i tauleta: fletxes + scroll tàctil */}
             <MobileNavCarousel pathname={pathname} t={t} />
             {/* Menú desktop: icones repartides entre logo i tema */}
@@ -167,8 +171,7 @@ export default function AppLayout({
                 <LanguageSelector />
                 <AppInfoPopup />
               </div>
-              <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[70px] sm:max-w-[100px] md:max-w-none">{t('nav.hello', { nickname })}</span>
-              <div className="hidden md:block">
+              <div className="hidden md:flex items-center gap-1 shrink-0">
                 <NavNotificationsBell />
               </div>
               <button

@@ -122,6 +122,20 @@ input[type="date"]#filter-date-from {
   animation: logo-idle-reverse 25s ease-in-out infinite;
 }
 
+/* Rotació d'una volta sencera per la icona de refresh (fletxes) */
+@keyframes refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-refresh-spin {
+  animation: refresh-spin 0.5s ease-out forwards;
+}
+
 /* Cercle groc amb efecte pulse per l'onboarding (icona d'informació) */
 @keyframes pulse-ring {
   0%,
