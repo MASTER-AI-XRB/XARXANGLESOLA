@@ -170,8 +170,6 @@ export default function AppLayout({
                 <ThemeToggle />
                 <LanguageSelector />
                 <AppInfoPopup />
-              </div>
-              <div className="hidden md:flex items-center gap-1 shrink-0">
                 <NavNotificationsBell />
               </div>
               <button
@@ -182,9 +180,10 @@ export default function AppLayout({
               >
                 <span className="text-lg leading-none" aria-hidden>⏻</span>
               </button>
-              {/* Mòbil: icona d'informació i botó menú hamburguesa */}
+              {/* Mòbil: icona d'informació, campana i botó menú hamburguesa */}
               <div className="flex md:hidden items-center gap-1">
                 <AppInfoPopup />
+                <NavNotificationsBell />
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -206,7 +205,6 @@ export default function AppLayout({
               <div className="flex items-center gap-2 px-3 pb-3 mb-2 border-b dark:border-gray-700">
                 <ThemeToggle />
                 <LanguageSelector />
-                <NavNotificationsBell />
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false)
