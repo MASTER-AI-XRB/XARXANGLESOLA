@@ -27,7 +27,7 @@ export function AppInfoPopup() {
   const [open, setOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [anchorRect, setAnchorRect] = useState<{ bottom: number; left: number } | null>(null)
+  const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
   const [buttonRect, setButtonRect] = useState<{ x: number; y: number; r: number } | null>(null)
   const [windowSize, setWindowSize] = useState({ w: 0, h: 0 })
   const panelRef = useRef<HTMLDivElement>(null)
@@ -166,7 +166,7 @@ export function AppInfoPopup() {
         onClick={() => {
           if (!open && buttonRef.current && isMobile) {
             const rect = buttonRef.current.getBoundingClientRect()
-            setAnchorRect({ bottom: rect.bottom, left: rect.left })
+            setAnchorRect({ bottom: rect.bottom, right: rect.right })
           }
           if (open) setAnchorRect(null)
           setOpen((prev) => !prev)
@@ -205,7 +205,7 @@ export function AppInfoPopup() {
               isMobile && anchorRect && typeof window !== 'undefined'
                 ? {
                     top: anchorRect.bottom + DROPDOWN_GAP,
-                    left: anchorRect.left,
+                    right: window.innerWidth - anchorRect.right,
                   }
                 : undefined
             }
