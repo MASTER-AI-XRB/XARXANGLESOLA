@@ -176,7 +176,7 @@ export function AppInfoPopup() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-[min(90vw,22rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col"
+          className="absolute right-0 top-full mt-2 w-[min(90vw,22rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col max-md:fixed max-md:right-4 max-md:left-auto max-md:top-16 max-md:max-w-[calc(100vw-2rem)]"
         >
           <div className="px-4 py-3 border-b dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 shrink-0">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">

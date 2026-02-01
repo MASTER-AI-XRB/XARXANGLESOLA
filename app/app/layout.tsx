@@ -162,13 +162,15 @@ export default function AppLayout({
               </Link>
             </nav>
             <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="hidden md:flex items-center gap-1 shrink-0">
                 <ThemeToggle />
                 <LanguageSelector />
                 <AppInfoPopup />
               </div>
               <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[70px] sm:max-w-[100px] md:max-w-none">{t('nav.hello', { nickname })}</span>
-              <NavNotificationsBell />
+              <div className="hidden md:block">
+                <NavNotificationsBell />
+              </div>
               <button
                 onClick={handleLogout}
                 className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500 text-white hover:bg-red-600 transition shrink-0"
@@ -177,11 +179,13 @@ export default function AppLayout({
               >
                 <span className="text-lg leading-none" aria-hidden>⏻</span>
               </button>
-              {/* Botó menú mòbil */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
+              {/* Mòbil: icona d'informació i botó menú hamburguesa */}
+              <div className="flex md:hidden items-center gap-1">
+                <AppInfoPopup />
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -189,12 +193,18 @@ export default function AppLayout({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   )}
                 </svg>
-              </button>
+                </button>
+              </div>
             </div>
           </div>
           {/* Menú mòbil */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t dark:border-gray-700 py-4">
+              <div className="flex items-center justify-center gap-2 px-3 pb-3 mb-2 border-b dark:border-gray-700">
+                <ThemeToggle />
+                <LanguageSelector />
+                <NavNotificationsBell />
+              </div>
               <div className="flex flex-col space-y-2">
                 <Link
                   href="/app"
