@@ -17,8 +17,10 @@ const USE_CASE_KEYS = [
   'settings',
 ] as const
 
-/** Passos del tutorial: 0 = icona (i), 1 = titular, 2..8 = productes, preferits, ... configuració */
-const ONBOARDING_STEPS = 1 + 1 + USE_CASE_KEYS.length // icon + header + 7 seccions
+/** Pas extra entre reserva i xat: obliga a obrir "Més detalls" de reserves */
+const RESERVE_DETAIL_STEP = 6
+/** Passos: 0 = icona, 1 = titular, 2..5 = productes..reserva, 6 = Més detalls, 7..9 = xat..configuració */
+const ONBOARDING_STEPS = 1 + 1 + USE_CASE_KEYS.length + 1 // icon + header + 7 seccions + 1 pas "Més detalls"
 
 function getOnboardingSeen(): boolean {
   if (typeof window === 'undefined') return true
@@ -36,6 +38,8 @@ export function AppInfoPopup() {
   const [open, setOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0)
+  const [reserveDetailOpen, setReserveDetailOpen] = useState(false)
+  const [reserveDetailViewed, setReserveDetailViewed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
   const [buttonRect, setButtonRect] = useState<HoleCircle | null>(null)
@@ -44,6 +48,7 @@ export function AppInfoPopup() {
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  const reserveDetailButtonRef = useRef<HTMLButtonElement>(null)
   const stepRefs = useRef<(HTMLDivElement | null)[]>([])
   const { t } = useI18n()
   const { setOnboardingActive } = useOnboarding()
@@ -146,6 +151,7 @@ export function AppInfoPopup() {
   }, [showOnboarding])
 
   const advanceOnboarding = useCallback(() => {
+    if (onboardingStep === RESERVE_DETAIL_STEP && !reserveDetailViewed) return
     if (onboardingStep < ONBOARDING_STEPS - 1) {
       setOnboardingStep((s) => s + 1)
     } else {
@@ -156,7 +162,15 @@ export function AppInfoPopup() {
       setOpen(false)
       setOnboardingStep(0)
     }
-  }, [onboardingStep])
+  }, [onboardingStep, reserveDetailViewed])
+
+  const prevReserveDetailOpen = useRef(false)
+  useEffect(() => {
+    if (prevReserveDetailOpen.current && !reserveDetailOpen && showOnboarding && onboardingStep === RESERVE_DETAIL_STEP) {
+      setReserveDetailViewed(true)
+    }
+    prevReserveDetailOpen.current = reserveDetailOpen
+  }, [reserveDetailOpen, showOnboarding, onboardingStep])
 
   useLayoutEffect(() => {
     if (!showOnboarding || !open || onboardingStep < 1) {
@@ -166,7 +180,11 @@ export function AppInfoPopup() {
     const el =
       onboardingStep === 1
         ? headerRef.current
-        : stepRefs.current[onboardingStep - 2] ?? null
+        : onboardingStep === RESERVE_DETAIL_STEP
+          ? reserveDetailButtonRef.current
+          : onboardingStep <= 5
+            ? stepRefs.current[onboardingStep - 2] ?? null
+            : stepRefs.current[onboardingStep - 3] ?? null
     if (!el) {
       setStepRect(null)
       return
@@ -384,6 +402,22 @@ export function AppInfoPopup() {
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
                   {t(`info.${key}Desc`)}
                 </p>
+                {key === 'reserve' && (
+                  <button
+                    ref={reserveDetailButtonRef}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setReserveDetailOpen(true)
+                    }}
+                    className="mt-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                  >
+                    {t('info.reserveMoreDetails')}
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -404,6 +438,58 @@ export function AppInfoPopup() {
       })()}
       {/* Overlay d'onboarding després del panell per quedar per sobre (z-[70]) */}
       {typeof document !== 'undefined' && onboardingOverlay && createPortal(onboardingOverlay, document.body)}
+      {/* Popup de detall de reserves (dos tipus); es tanca amb el botó */}
+      {reserveDetailOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setReserveDetailOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reserve-detail-title"
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 shrink-0">
+              <h3 id="reserve-detail-title" className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('info.reserveDetailTitle')}
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                {t('info.reserveDetailIntro')}
+              </p>
+            </div>
+            <div className="overflow-y-auto flex-1 min-h-0 px-4 py-3 space-y-3">
+              <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {t('info.reserveType1Title')}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
+                  {t('info.reserveType1Desc')}
+                </p>
+              </div>
+              <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {t('info.reserveType2Title')}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
+                  {t('info.reserveType2Desc')}
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
+              <button
+                type="button"
+                onClick={() => setReserveDetailOpen(false)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
