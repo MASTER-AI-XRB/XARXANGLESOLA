@@ -219,8 +219,8 @@ export function AppInfoPopup() {
             className="fixed rounded-full border-8 border-yellow-500 animate-[pulse-ring_1.5s_ease-in-out_infinite] pointer-events-none"
             style={{
               zIndex: overlayZ + 1,
-              left: buttonRect.x - (buttonRect.r + 8) / 2 + 1,
-              top: buttonRect.y - (buttonRect.r + 8) / 2 + 1,
+              left: buttonRect.x - (buttonRect.r + 8) / 2,
+              top: buttonRect.y - (buttonRect.r + 8) / 2,
               width: buttonRect.r + 8,
               height: buttonRect.r + 8,
             }}
