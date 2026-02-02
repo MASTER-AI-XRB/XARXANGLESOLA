@@ -463,6 +463,7 @@ export function AppInfoPopup() {
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
                 <p className="font-medium text-gray-900 dark:text-white">
                   {t('info.reserveType1Title')}
+                  <span className="inline-block text-blue-500 text-6xl leading-none align-middle ml-0.5 -mt-9">.</span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
                   {t('info.reserveType1Desc')}
@@ -471,6 +472,7 @@ export function AppInfoPopup() {
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
                 <p className="font-medium text-gray-900 dark:text-white">
                   {t('info.reserveType2Title')}
+                  <span className="inline-block text-yellow-500 text-6xl leading-none align-middle ml-0.5 -mt-9">.</span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
                   {t('info.reserveType2Desc')}
