@@ -14,6 +14,7 @@ import DevConsole from '@/components/DevConsole'
 import { NavNotificationsBell } from '@/components/NavNotificationsBell'
 import { AppInfoPopup } from '@/components/AppInfoPopup'
 import { MobileNavCarousel } from '@/components/MobileNavCarousel'
+import { OnboardingProvider, useOnboarding } from '@/lib/onboarding-context'
 
 export default function AppLayout({
   children,
@@ -85,6 +86,7 @@ export default function AppLayout({
 
   return (
     <AppSocketProvider>
+    <OnboardingProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
@@ -275,10 +277,20 @@ export default function AppLayout({
           )}
         </div>
       </nav>
-      <main>{children}</main>
+      <AppMain>{children}</AppMain>
       <DevConsole />
     </div>
+    </OnboardingProvider>
     </AppSocketProvider>
+  )
+}
+
+function AppMain({ children }: { children: React.ReactNode }) {
+  const { isOnboardingActive } = useOnboarding()
+  return (
+    <main className={isOnboardingActive ? 'hidden' : undefined}>
+      {children}
+    </main>
   )
 }
 
