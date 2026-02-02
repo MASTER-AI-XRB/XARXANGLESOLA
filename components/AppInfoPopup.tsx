@@ -131,7 +131,7 @@ export function AppInfoPopup() {
       <>
         {/* Pantalla negra mig opaca amb forat visual (màscara); no bloqueja clics */}
         <div
-          className="fixed inset-0 z-[45] pointer-events-none"
+          className="fixed inset-0 z-[55] pointer-events-none"
           style={{
             background: 'rgba(0,0,0,0.6)',
             maskImage: `radial-gradient(circle at ${buttonRect.x}px ${buttonRect.y}px, transparent ${buttonRect.r}px, black ${buttonRect.r + 1}px)`,
@@ -141,7 +141,7 @@ export function AppInfoPopup() {
         />
         {/* Capa que bloqueja clics a tot excepte el forat (SVG amb path evenodd) */}
         <svg
-          className="fixed inset-0 z-[45] w-full h-full pointer-events-auto"
+          className="fixed inset-0 z-[55] w-full h-full pointer-events-auto"
           aria-hidden
           style={{ pointerEvents: 'auto' }}
         >
@@ -151,9 +151,9 @@ export function AppInfoPopup() {
             d={`M 0 0 H ${windowSize.w} V ${windowSize.h} H 0 Z M ${buttonRect.x} ${buttonRect.y} m ${-buttonRect.r} 0 a ${buttonRect.r} ${buttonRect.r} 0 1 1 ${2 * buttonRect.r} 0 a ${buttonRect.r} ${buttonRect.r} 0 1 1 ${-2 * buttonRect.r} 0`}
           />
         </svg>
-        {/* Cercle blau amb efecte pulse; no captura clics */}
+        {/* Cercle amb efecte pulse; per sobre de la capa negra (z > botó 50) */}
         <div
-          className="fixed z-[46] rounded-full border-8 border-yellow-500 animate-[pulse-ring_1.5s_ease-in-out_infinite] pointer-events-none"
+          className="fixed z-[56] rounded-full border-8 border-yellow-500 animate-[pulse-ring_1.5s_ease-in-out_infinite] pointer-events-none"
           style={{
             left: buttonRect.x - (buttonRect.r + 8) / 2,
             top: buttonRect.y - (buttonRect.r + 8) / 2,
