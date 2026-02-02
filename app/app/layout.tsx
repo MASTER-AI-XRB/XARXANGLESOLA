@@ -169,9 +169,9 @@ export default function AppLayout({
               <div className="hidden md:flex items-center gap-1 shrink-0">
                 <ThemeToggle />
                 <LanguageSelector />
-                <AppInfoPopup />
-                <NavNotificationsBell />
               </div>
+              <AppInfoPopup />
+              <NavNotificationsBell />
               <button
                 onClick={handleLogout}
                 className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-red-500 text-white hover:bg-red-600 transition shrink-0"
@@ -180,14 +180,11 @@ export default function AppLayout({
               >
                 <span className="text-lg leading-none" aria-hidden>⏻</span>
               </button>
-              {/* Mòbil: icona d'informació, campana i botó menú hamburguesa */}
-              <div className="flex md:hidden items-center gap-1">
-                <AppInfoPopup />
-                <NavNotificationsBell />
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="flex md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
+              >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -195,8 +192,7 @@ export default function AppLayout({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   )}
                 </svg>
-                </button>
-              </div>
+              </button>
             </div>
           </div>
           {/* Menú mòbil */}
