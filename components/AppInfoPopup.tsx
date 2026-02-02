@@ -139,18 +139,49 @@ export function AppInfoPopup() {
           }}
           aria-hidden
         />
-        {/* Capa que bloqueja clics a tot excepte el forat (SVG amb path evenodd) */}
-        <svg
-          className="fixed inset-0 z-[55] w-full h-full pointer-events-auto"
-          aria-hidden
-          style={{ pointerEvents: 'auto' }}
-        >
-          <path
-            fill="transparent"
-            fillRule="evenodd"
-            d={`M 0 0 H ${windowSize.w} V ${windowSize.h} H 0 Z M ${buttonRect.x} ${buttonRect.y} m ${-buttonRect.r} 0 a ${buttonRect.r} ${buttonRect.r} 0 1 1 ${2 * buttonRect.r} 0 a ${buttonRect.r} ${buttonRect.r} 0 1 1 ${-2 * buttonRect.r} 0`}
+        {/* Bloqueja clics amb 4 bandes (forat al mig): només la zona del forat deixa passar clics a la (i) */}
+        <div className="fixed inset-0 z-[55] w-full h-full" style={{ pointerEvents: 'none' }} aria-hidden>
+          <div
+            className="absolute bg-transparent"
+            style={{
+              left: 0,
+              top: 0,
+              width: windowSize.w,
+              height: Math.max(0, buttonRect.y - buttonRect.r),
+              pointerEvents: 'auto',
+            }}
           />
-        </svg>
+          <div
+            className="absolute bg-transparent"
+            style={{
+              left: 0,
+              top: buttonRect.y - buttonRect.r,
+              width: Math.max(0, buttonRect.x - buttonRect.r),
+              height: 2 * buttonRect.r,
+              pointerEvents: 'auto',
+            }}
+          />
+          <div
+            className="absolute bg-transparent"
+            style={{
+              left: buttonRect.x + buttonRect.r,
+              top: buttonRect.y - buttonRect.r,
+              width: Math.max(0, windowSize.w - (buttonRect.x + buttonRect.r)),
+              height: 2 * buttonRect.r,
+              pointerEvents: 'auto',
+            }}
+          />
+          <div
+            className="absolute bg-transparent"
+            style={{
+              left: 0,
+              top: buttonRect.y + buttonRect.r,
+              width: windowSize.w,
+              height: Math.max(0, windowSize.h - (buttonRect.y + buttonRect.r)),
+              pointerEvents: 'auto',
+            }}
+          />
+        </div>
         {/* Cercle amb efecte pulse; per sobre de la capa negra (z > botó 50) */}
         <div
           className="fixed z-[56] rounded-full border-8 border-yellow-500 animate-[pulse-ring_1.5s_ease-in-out_infinite] pointer-events-none"
@@ -171,9 +202,10 @@ export function AppInfoPopup() {
         ref={buttonRef}
         type="button"
         onClick={() => {
-          if (!open && buttonRef.current && isMobile) {
+          if (!open && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect()
-            setAnchorRect({ bottom: rect.bottom, right: rect.right })
+            if (isMobile) setAnchorRect({ bottom: rect.bottom, right: rect.right })
+            else if (showOnboarding) setAnchorRect({ bottom: rect.bottom, right: rect.right })
           }
           if (open) setAnchorRect(null)
           setOpen((prev) => !prev)
@@ -200,16 +232,19 @@ export function AppInfoPopup() {
       </button>
       {typeof document !== 'undefined' && onboardingOverlay && createPortal(onboardingOverlay, document.body)}
       {open && (() => {
+        const portalPanel = (showOnboarding && typeof document !== 'undefined') || (isMobile && typeof document !== 'undefined' && anchorRect)
+        const isFixed = portalPanel
+        const panelZ = showOnboarding ? 'z-[65]' : 'z-[60]'
         const panelContent = (
           <div
             ref={panelRef}
             className={
-              isMobile && typeof document !== 'undefined' && anchorRect
-                ? 'fixed z-[60] w-[min(90vw,22rem)] max-w-[calc(100vw-1rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col'
+              isFixed
+                ? `fixed ${panelZ} w-[min(90vw,22rem)] max-w-[calc(100vw-1rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col`
                 : 'absolute right-0 top-full mt-2 w-[min(90vw,22rem)] max-h-[min(80vh,28rem)] overflow-hidden rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 flex flex-col'
             }
             style={
-              isMobile && anchorRect && typeof window !== 'undefined'
+              isFixed && anchorRect && typeof window !== 'undefined'
                 ? (() => {
                     const w = Math.min(window.innerWidth * 0.9, INFO_PANEL_MAX_WIDTH_PX)
                     const rightAligned = window.innerWidth - anchorRect.right
@@ -219,7 +254,9 @@ export function AppInfoPopup() {
                       right: Math.min(rightAligned, rightSoLeftMargin),
                     }
                   })()
-                : undefined
+                : isFixed && !anchorRect && typeof window !== 'undefined'
+                  ? { top: '1rem', right: '1rem', left: '1rem', margin: '0 auto', maxWidth: '22rem' }
+                  : undefined
             }
           >
           <div className="px-4 py-3 border-b dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 shrink-0">
@@ -256,7 +293,7 @@ export function AppInfoPopup() {
           </div>
         </div>
         )
-        return isMobile && typeof document !== 'undefined' && anchorRect
+        return portalPanel && typeof document !== 'undefined'
           ? createPortal(panelContent, document.body)
           : panelContent
       })()}
