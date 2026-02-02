@@ -60,6 +60,11 @@ export function AppInfoPopup() {
     const el = buttonRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
+    // Només mostrar onboarding quan aquesta instància és visible (evita duplicat desktop/mòbil)
+    if (rect.width <= 0 || rect.height <= 0) {
+      setButtonRect(null)
+      return
+    }
     const r = Math.max(rect.width, rect.height) / 2 + 12
     setButtonRect({
       x: rect.left + rect.width / 2,
