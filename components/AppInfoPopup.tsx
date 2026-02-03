@@ -462,7 +462,14 @@ export function AppInfoPopup() {
             {/* Icona de reservar (bookmark outline) sense activar, reutilitzada als títols i a la descripció */}
             {(() => {
               const ReserveIcon = ({ className = 'w-5 h-5', fill = 'none' }: { className?: string; fill?: 'none' | 'currentColor' }) => (
-                <svg className={className} fill={fill} stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden>
+                <svg
+                  className={className}
+                  fill={fill}
+                  stroke="currentColor"
+                  viewBox={fill === 'currentColor' ? '0 0 20 20' : '0 0 24 24'}
+                  preserveAspectRatio="xMidYMid meet"
+                  aria-hidden
+                >
                   {fill === 'currentColor' ? (
                     <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                   ) : (
@@ -475,8 +482,8 @@ export function AppInfoPopup() {
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
                 <p className="font-medium text-gray-900 dark:text-white inline-flex items-center gap-1 flex-wrap">
                   {t('info.reserveType1Title')}
-                  <span className="inline-flex rounded-full p-1 bg-blue-500 text-white shrink-0 ml-1" aria-hidden>
-                    <ReserveIcon className="w-4 h-4" />
+                  <span className="inline-flex items-center justify-center rounded-full p-1 bg-blue-500 text-white shrink-0 ml-1" aria-hidden>
+                    <ReserveIcon className="w-4 h-4" fill="currentColor" />
                   </span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
@@ -490,8 +497,8 @@ export function AppInfoPopup() {
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
                 <p className="font-medium text-gray-900 dark:text-white inline-flex items-center gap-1 flex-wrap">
                   {t('info.reserveType2Title')}
-                  <span className="inline-flex rounded-full p-1 bg-yellow-500 text-white shrink-0" aria-hidden>
-                    <ReserveIcon className="w-4 h-4" />
+                  <span className="inline-flex items-center justify-center rounded-full p-1 bg-yellow-500 text-white shrink-0 ml-1" aria-hidden>
+                    <ReserveIcon className="w-4 h-4" fill="currentColor" />
                   </span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
