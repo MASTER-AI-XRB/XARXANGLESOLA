@@ -45,7 +45,7 @@ export default function FavoritesPage() {
 
   const fetchFavorites = async () => {
     try {
-      const response = await fetch('/api/favorites')
+      const response = await fetch('/api/favorites', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setProducts(data)
@@ -108,7 +108,7 @@ export default function FavoritesPage() {
               : p
           )
         )
-        await fetchFavorites()
+        fetchFavorites()
       }
     } catch (err) {
       logError('Error actualitzant reserva:', err)

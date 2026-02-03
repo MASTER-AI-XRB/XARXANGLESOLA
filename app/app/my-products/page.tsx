@@ -46,7 +46,7 @@ export default function MyProductsPage() {
 
   const fetchMyProducts = async () => {
     try {
-      const response = await fetch('/api/products/my')
+      const response = await fetch('/api/products/my', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setProducts(data)
@@ -112,7 +112,7 @@ export default function MyProductsPage() {
               : p
           )
         )
-        await fetchMyProducts()
+        fetchMyProducts()
       }
     } catch (error) {
       logError('Error actualitzant reserva:', error)

@@ -49,7 +49,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const fetchProduct = async () => {
     if (!productId) return
     try {
-      const response = await fetch(`/api/products/${productId}`)
+      const response = await fetch(`/api/products/${productId}`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setProduct(data)
@@ -75,15 +75,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const toggleReserved = async () => {
     if (!product || (!canReserve && !canUnreserve)) return
+    const nextReserved = !product.reserved
 
     try {
       const response = await fetch(`/api/products/${product.id}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: nextReserved }),
       })
       if (response.ok) {
-        await fetchProduct()
+        setProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                reserved: nextReserved,
+                reservedBy: nextReserved && nickname ? { nickname } : null,
+              }
+            : null
+        )
+        fetchProduct()
       }
     } catch (error) {
       logError('Error actualitzant reserva:', error)

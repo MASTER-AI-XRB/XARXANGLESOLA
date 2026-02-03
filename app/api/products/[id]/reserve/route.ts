@@ -59,13 +59,10 @@ export async function PATCH(
         data: { reserved: true, reservedById: authUserId },
       })
 
-      const notificationsEnabled =
-        process.env.NODE_ENV === 'production' ||
-        process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
       const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
       const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
 
-      if (notificationsEnabled && notifySecret && socketUrl && product.name) {
+      if (notifySecret && socketUrl && product.name) {
         try {
           const [actor, favorites] = await Promise.all([
             prisma.user.findUnique({
@@ -140,13 +137,10 @@ export async function PATCH(
       data: { reserved: false, reservedById: null },
     })
 
-    const notificationsEnabled =
-      process.env.NODE_ENV === 'production' ||
-      process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
     const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
     const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
 
-    if (notificationsEnabled && notifySecret && socketUrl && product.name) {
+    if (notifySecret && socketUrl && product.name) {
       try {
         const [actor, favorites] = await Promise.all([
           prisma.user.findUnique({
