@@ -459,26 +459,48 @@ export function AppInfoPopup() {
                 {t('info.reserveDetailIntro')}
               </p>
             </div>
+            {/* Icona de reservar (bookmark outline) sense activar, reutilitzada als títols i a la descripció */}
+            {(() => {
+              const ReserveIcon = ({ className = 'w-5 h-5', fill = 'none' }: { className?: string; fill?: 'none' | 'currentColor' }) => (
+                <svg className={className} fill={fill} stroke="currentColor" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden>
+                  {fill === 'currentColor' ? (
+                    <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  )}
+                </svg>
+              )
+              return (
             <div className="overflow-y-auto flex-1 min-h-0 px-4 py-3 space-y-3">
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
-                <p className="font-medium text-gray-900 dark:text-white">
+                <p className="font-medium text-gray-900 dark:text-white inline-flex items-center gap-1 flex-wrap">
                   {t('info.reserveType1Title')}
-                  <span className="inline-block text-blue-500 text-6xl leading-none align-middle ml-0.5 -mt-9">.</span>
+                  <span className="inline-flex rounded-full p-1 bg-blue-500 text-white shrink-0 ml-1" aria-hidden>
+                    <ReserveIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
-                  {t('info.reserveType1Desc')}
+                  {t('info.reserveType1DescBefore')}
+                  <span className="inline-flex align-middle rounded-full p-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 shrink-0 mx-0.5" aria-hidden>
+                    <ReserveIcon className="w-3.5 h-3.5" />
+                  </span>
+                  {t('info.reserveType1DescAfter')}
                 </p>
               </div>
               <div className="text-sm border-l-2 border-blue-200 dark:border-blue-700 pl-3 py-0.5">
-                <p className="font-medium text-gray-900 dark:text-white">
+                <p className="font-medium text-gray-900 dark:text-white inline-flex items-center gap-1 flex-wrap">
                   {t('info.reserveType2Title')}
-                  <span className="inline-block text-yellow-500 text-6xl leading-none align-middle ml-0.5 -mt-9">.</span>
+                  <span className="inline-flex rounded-full p-1 bg-yellow-500 text-white shrink-0" aria-hidden>
+                    <ReserveIcon className="w-4 h-4" />
+                  </span>
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs leading-relaxed">
                   {t('info.reserveType2Desc')}
                 </p>
               </div>
             </div>
+              )
+            })()}
             <div className="px-4 py-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
               <button
                 type="button"
