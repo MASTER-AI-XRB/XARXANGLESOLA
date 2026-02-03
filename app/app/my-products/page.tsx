@@ -92,14 +92,26 @@ export default function MyProductsPage() {
     e.stopPropagation()
     const product = products.find((p) => p.id === productId)
     if (!product || (!canReserve(product) && !canUnreserve(product))) return
+    const nextReserved = !product.reserved
 
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: nextReserved }),
       })
       if (response.ok) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId
+              ? {
+                  ...p,
+                  reserved: nextReserved,
+                  reservedBy: nextReserved && nickname ? { nickname } : null,
+                }
+              : p
+          )
+        )
         await fetchMyProducts()
       }
     } catch (error) {

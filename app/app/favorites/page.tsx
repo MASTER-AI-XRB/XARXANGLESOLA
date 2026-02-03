@@ -89,13 +89,27 @@ export default function FavoritesPage() {
     e.stopPropagation()
     const product = products.find((p) => p.id === productId)
     if (!product || !canUnreserve(product)) return
+    const nextReserved = !product.reserved
     try {
       const res = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reserved: !product.reserved }),
+        body: JSON.stringify({ reserved: nextReserved }),
       })
-      if (res.ok) await fetchFavorites()
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId
+              ? {
+                  ...p,
+                  reserved: nextReserved,
+                  reservedBy: nextReserved && nickname ? { nickname } : null,
+                }
+              : p
+          )
+        )
+        await fetchFavorites()
+      }
     } catch (err) {
       logError('Error actualitzant reserva:', err)
     }

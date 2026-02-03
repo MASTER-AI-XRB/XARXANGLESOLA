@@ -58,6 +58,74 @@ export async function PATCH(
         where: { id: resolvedParams.id },
         data: { reserved: true, reservedById: authUserId },
       })
+
+      const notificationsEnabled =
+        process.env.NODE_ENV === 'production' ||
+        process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
+      const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+      const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
+
+      if (notificationsEnabled && notifySecret && socketUrl && product.name) {
+        try {
+          const [actor, favorites] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: authUserId },
+              select: { nickname: true },
+            }),
+            prisma.favorite.findMany({
+              where: {
+                productId: resolvedParams.id,
+                userId: { not: authUserId },
+              },
+              select: { userId: true },
+            }),
+          ])
+          const actorNickname = actor?.nickname ?? 'Algú'
+          const productName = product.name
+          const productId = resolvedParams.id
+          const title = 'Producte reservat'
+          const message = `${actorNickname} ha reservat un producte dels teus preferits: ${productName}`
+          const action = {
+            label: 'Veure producte',
+            url: `/app/products/${productId}`,
+          }
+
+          await Promise.all(
+            favorites.map((fav) =>
+              fetch(`${socketUrl.replace(/\/$/, '')}/notify`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-notify-token': notifySecret,
+                },
+                body: JSON.stringify({
+                  targetUserId: fav.userId,
+                  type: 'info',
+                  title,
+                  message,
+                  notificationType: 'reserved_favorite',
+                  actorNickname,
+                  productName,
+                  action,
+                }),
+              })
+                .then(async (r) => {
+                  if (r.ok || r.status === 404) return
+                  const d = await r.json().catch(() => ({}))
+                  logWarn('Notify reserva-preferits:', (d as { error?: string })?.error ?? r.status)
+                })
+                .catch(() => {})
+            )
+          )
+        } catch (e) {
+          if (process.env.NODE_ENV === 'production') {
+            logError('Error enviant notificacions reserva-preferits:', e)
+          } else {
+            logWarn('No s\'han pogut enviar notificacions reserva-preferits.', e)
+          }
+        }
+      }
+
       return apiOk({ reserved: updated.reserved })
     }
 
