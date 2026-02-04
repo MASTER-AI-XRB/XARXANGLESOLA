@@ -75,7 +75,14 @@ export default function AppLayout({
     if (!nickname || socketReady) return
     fetch('/api/auth/socket-token')
       .then(async (response) => {
-        const data = await response.json()
+        const data = await response.json().catch(() => ({}))
+        if (response.status === 401) {
+          clearStoredSession()
+          setNickname(null)
+          setSocketReady(false)
+          router.push('/')
+          return
+        }
         if (response.ok && data?.nickname && data?.socketToken) {
           setStoredSession(data.nickname, data.socketToken)
           setSocketReady(true)
@@ -84,7 +91,7 @@ export default function AppLayout({
         }
       })
       .catch(() => setSocketReady(true))
-  }, [nickname, socketReady])
+  }, [nickname, socketReady, router])
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
