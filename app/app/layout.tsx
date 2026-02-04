@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -29,59 +29,63 @@ export default function AppLayout({
   const sessionHook = useSession()
   const { data: session, status } = sessionHook ?? { data: null, status: 'loading' as const }
   const { t } = useI18n()
+  const initialSyncDone = useRef(false)
+  const refreshTokenRequested = useRef(false)
 
   useEffect(() => {
     const savedNickname = getStoredNickname()
-    if (!savedNickname) {
-      if (pathname === '/app/complete-profile') {
-        return
+    if (savedNickname) {
+      if (!initialSyncDone.current) {
+        initialSyncDone.current = true
+        setNickname(savedNickname)
       }
-      if (status === 'loading') {
-        return
-      }
-      if (!session) {
-        router.push('/')
-        return
-      }
-      const tryFetchToken = (isRetry?: boolean) => {
-        fetch('/api/auth/socket-token')
-          .then(async (response) => {
-            const data = await response.json().catch(() => ({}))
-            if (response.status === 401) {
-              if (!isRetry) {
-                setTimeout(() => tryFetchToken(true), 800)
-                return
-              }
-              router.push('/')
-              return
-            }
-            if (!response.ok) {
-              router.push('/')
-              return
-            }
-            if (data?.needsNickname) {
-              router.push('/app/complete-profile')
-              return
-            }
-            if (data?.nickname && data?.socketToken) {
-              setStoredSession(data.nickname, data.socketToken)
-              setNickname(data.nickname)
-              setSocketReady(true)
+      return
+    }
+    initialSyncDone.current = true
+    if (pathname === '/app/complete-profile') return
+    if (status === 'loading') return
+    if (!session) {
+      router.push('/')
+      return
+    }
+    const tryFetchToken = (isRetry?: boolean) => {
+      fetch('/api/auth/socket-token')
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}))
+          if (response.status === 401) {
+            if (!isRetry) {
+              setTimeout(() => tryFetchToken(true), 800)
               return
             }
             router.push('/')
-          })
-          .catch(() => router.push('/'))
-      }
-      tryFetchToken()
-      return
+            return
+          }
+          if (!response.ok) {
+            router.push('/')
+            return
+          }
+          if (data?.needsNickname) {
+            router.push('/app/complete-profile')
+            return
+          }
+          if (data?.nickname && data?.socketToken) {
+            setStoredSession(data.nickname, data.socketToken)
+            setNickname(data.nickname)
+            setSocketReady(true)
+            return
+          }
+          router.push('/')
+        })
+        .catch(() => router.push('/'))
     }
-    setNickname(savedNickname)
-  }, [router, pathname, session, status])
+    tryFetchToken()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- session?.user?.id evita bucle quan useSession retorna nova referència
+  }, [router, pathname, status, session?.user?.id])
 
   // Refrescar token del socket quan l’usuari ja tenia nickname a localStorage (token pot estar caducat)
   useEffect(() => {
-    if (!nickname || socketReady) return
+    if (!nickname || socketReady || refreshTokenRequested.current) return
+    refreshTokenRequested.current = true
     fetch('/api/auth/socket-token')
       .then(async (response) => {
         const data = await response.json().catch(() => ({}))
@@ -89,6 +93,7 @@ export default function AppLayout({
           clearStoredSession()
           setNickname(null)
           setSocketReady(false)
+          refreshTokenRequested.current = false
           return
         }
         if (response.ok && data?.nickname && data?.socketToken) {
@@ -98,8 +103,11 @@ export default function AppLayout({
           setSocketReady(true)
         }
       })
-      .catch(() => setSocketReady(true))
-  }, [nickname, socketReady, router])
+      .catch(() => {
+        setSocketReady(true)
+        refreshTokenRequested.current = false
+      })
+  }, [nickname, socketReady])
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
