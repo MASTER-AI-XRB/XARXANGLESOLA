@@ -30,7 +30,6 @@ export default function AppLayout({
   const { data: session, status } = sessionHook ?? { data: null, status: 'loading' as const }
   const { t } = useI18n()
   const initialSyncDone = useRef(false)
-  const refreshTokenRequested = useRef(false)
   const firstFetchDone = useRef(false)
   const redirectToLoginDone = useRef(false)
 
@@ -40,6 +39,7 @@ export default function AppLayout({
       if (!initialSyncDone.current) {
         initialSyncDone.current = true
         setNickname(savedNickname)
+        setSocketReady(true)
       }
       return
     }
@@ -93,21 +93,6 @@ export default function AppLayout({
   }, [router, pathname, status, session?.user?.id])
 
   // Refrescar token del socket quan l’usuari ja tenia nickname a localStorage (token pot estar caducat)
-  useEffect(() => {
-    if (!nickname || socketReady || refreshTokenRequested.current) return
-    refreshTokenRequested.current = true
-    fetch('/api/auth/socket-token')
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}))
-        if (response.ok && data?.nickname && data?.socketToken) {
-          setStoredSession(data.nickname, data.socketToken)
-          setSocketReady(true)
-        } else {
-          setSocketReady(true)
-        }
-      })
-      .catch(() => setSocketReady(true))
-  }, [nickname, socketReady])
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
@@ -121,6 +106,14 @@ export default function AppLayout({
   if (!nickname) {
     if (pathname === '/app/complete-profile') {
       return <main>{children}</main>
+    }
+    // Si hi ha nickname a localStorage, l’effect el posarà; no redirigir abans (evita bucle / ↔ /app)
+    if (getStoredNickname()) {
+      return (
+        <main className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+          <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+        </main>
+      )
     }
     if (status !== 'loading' && !session) {
       if (!redirectToLoginDone.current) {
