@@ -82,7 +82,7 @@ export async function PATCH(
         })
           .then(async (r) => {
             if (!r.ok) {
-              logWarn('Broadcast product-state (reserve) fallit:', r.status, await r.text().catch(() => ''))
+              logWarn('Broadcast product-state (reserve) fallit:', { status: r.status, body: await r.text().catch(() => '') })
             }
           })
           .catch((err) => {
@@ -172,7 +172,7 @@ export async function PATCH(
       })
         .then(async (r) => {
           if (!r.ok) {
-            logWarn('Broadcast product-state (unreserve) fallit:', r.status, await r.text().catch(() => ''))
+            logWarn('Broadcast product-state (unreserve) fallit:', { status: r.status, body: await r.text().catch(() => '') })
           }
         })
         .catch((err) => {
