@@ -43,28 +43,37 @@ export default function AppLayout({
         router.push('/')
         return
       }
-      fetch('/api/auth/socket-token')
-        .then(async (response) => {
-          const data = await response.json()
-          if (!response.ok) {
+      const tryFetchToken = (isRetry?: boolean) => {
+        fetch('/api/auth/socket-token')
+          .then(async (response) => {
+            const data = await response.json().catch(() => ({}))
+            if (response.status === 401) {
+              if (!isRetry) {
+                setTimeout(() => tryFetchToken(true), 800)
+                return
+              }
+              router.push('/')
+              return
+            }
+            if (!response.ok) {
+              router.push('/')
+              return
+            }
+            if (data?.needsNickname) {
+              router.push('/app/complete-profile')
+              return
+            }
+            if (data?.nickname && data?.socketToken) {
+              setStoredSession(data.nickname, data.socketToken)
+              setNickname(data.nickname)
+              setSocketReady(true)
+              return
+            }
             router.push('/')
-            return
-          }
-          if (data?.needsNickname) {
-            router.push('/app/complete-profile')
-            return
-          }
-          if (data?.nickname) {
-            setStoredSession(data.nickname, data.socketToken)
-            setNickname(data.nickname)
-            setSocketReady(true)
-            return
-          }
-          router.push('/')
-        })
-        .catch(() => {
-          router.push('/')
-        })
+          })
+          .catch(() => router.push('/'))
+      }
+      tryFetchToken()
       return
     }
     setNickname(savedNickname)
@@ -80,7 +89,6 @@ export default function AppLayout({
           clearStoredSession()
           setNickname(null)
           setSocketReady(false)
-          router.push('/')
           return
         }
         if (response.ok && data?.nickname && data?.socketToken) {
