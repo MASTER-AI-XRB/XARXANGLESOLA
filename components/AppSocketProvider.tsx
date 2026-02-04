@@ -42,7 +42,7 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
   addAlertRef.current = addAlert
 
   useEffect(() => {
-    if (!ready) {
+    if (ready === false) {
       setSocket((prev) => {
         if (prev) {
           prev.close()
@@ -99,6 +99,7 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
 
     s.on('product-state', (data: { productId: string; reserved?: boolean; reservedBy?: { nickname: string } | null; prestec?: boolean }) => {
       if (typeof window !== 'undefined' && data?.productId) {
+        logInfo('product-state rebut:', { productId: data.productId, reserved: data.reserved, reservedBy: data.reservedBy })
         window.dispatchEvent(new CustomEvent('product-state', { detail: data }))
       }
     })
@@ -109,7 +110,7 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       setSocket(null)
       setConnected(false)
     }
-  }, [])
+  }, [ready])
 
   return (
     <AppSocketContext.Provider value={{ socket, connected }}>

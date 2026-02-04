@@ -22,6 +22,7 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   const [nickname, setNickname] = useState<string | null>(null)
+  const [socketReady, setSocketReady] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
@@ -56,6 +57,7 @@ export default function AppLayout({
           if (data?.nickname) {
             setStoredSession(data.nickname, data.socketToken)
             setNickname(data.nickname)
+            setSocketReady(true)
             return
           }
           router.push('/')
@@ -67,6 +69,22 @@ export default function AppLayout({
     }
     setNickname(savedNickname)
   }, [router, pathname, session, status])
+
+  // Refrescar token del socket quan l’usuari ja tenia nickname a localStorage (token pot estar caducat)
+  useEffect(() => {
+    if (!nickname || socketReady) return
+    fetch('/api/auth/socket-token')
+      .then(async (response) => {
+        const data = await response.json()
+        if (response.ok && data?.nickname && data?.socketToken) {
+          setStoredSession(data.nickname, data.socketToken)
+          setSocketReady(true)
+        } else {
+          setSocketReady(true)
+        }
+      })
+      .catch(() => setSocketReady(true))
+  }, [nickname, socketReady])
 
   const handleLogout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
@@ -85,7 +103,7 @@ export default function AppLayout({
   }
 
   return (
-    <AppSocketProvider>
+    <AppSocketProvider ready={socketReady}>
     <OnboardingProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">

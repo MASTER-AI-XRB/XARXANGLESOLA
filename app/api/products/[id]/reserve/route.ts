@@ -79,7 +79,15 @@ export async function PATCH(
             reserved: true,
             reservedBy,
           }),
-        }).catch(() => {})
+        })
+          .then((r) => {
+            if (!r.ok) {
+              logWarn('Broadcast product-state (reserve) fallit:', r.status, await r.text().catch(() => ''))
+            }
+          })
+          .catch((err) => {
+            logWarn('Broadcast product-state (reserve) error:', err)
+          })
       }
 
       if (notifySecret && socketUrl && product.name) {
@@ -161,7 +169,15 @@ export async function PATCH(
           reserved: false,
           reservedBy: null,
         }),
-      }).catch(() => {})
+      })
+        .then((r) => {
+          if (!r.ok) {
+            logWarn('Broadcast product-state (unreserve) fallit:', r.status, await r.text().catch(() => ''))
+          }
+        })
+        .catch((err) => {
+          logWarn('Broadcast product-state (unreserve) error:', err)
+        })
     }
 
     if (notifySecret && socketUrl && product.name) {
