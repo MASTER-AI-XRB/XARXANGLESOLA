@@ -31,6 +31,8 @@ export default function AppLayout({
   const { t } = useI18n()
   const initialSyncDone = useRef(false)
   const refreshTokenRequested = useRef(false)
+  const firstFetchDone = useRef(false)
+  const redirectToLoginDone = useRef(false)
 
   useEffect(() => {
     const savedNickname = getStoredNickname()
@@ -48,6 +50,8 @@ export default function AppLayout({
       router.push('/')
       return
     }
+    if (firstFetchDone.current) return
+    firstFetchDone.current = true
     const tryFetchToken = (isRetry?: boolean) => {
       fetch('/api/auth/socket-token')
         .then(async (response) => {
@@ -57,10 +61,12 @@ export default function AppLayout({
               setTimeout(() => tryFetchToken(true), 800)
               return
             }
+            firstFetchDone.current = false
             router.push('/')
             return
           }
           if (!response.ok) {
+            firstFetchDone.current = false
             router.push('/')
             return
           }
@@ -74,9 +80,13 @@ export default function AppLayout({
             setSocketReady(true)
             return
           }
+          firstFetchDone.current = false
           router.push('/')
         })
-        .catch(() => router.push('/'))
+        .catch(() => {
+          firstFetchDone.current = false
+          router.push('/')
+        })
     }
     tryFetchToken()
   // eslint-disable-next-line react-hooks/exhaustive-deps -- session?.user?.id evita bucle quan useSession retorna nova referència
@@ -89,13 +99,6 @@ export default function AppLayout({
     fetch('/api/auth/socket-token')
       .then(async (response) => {
         const data = await response.json().catch(() => ({}))
-        if (response.status === 401) {
-          clearStoredSession()
-          setNickname(null)
-          setSocketReady(false)
-          refreshTokenRequested.current = false
-          return
-        }
         if (response.ok && data?.nickname && data?.socketToken) {
           setStoredSession(data.nickname, data.socketToken)
           setSocketReady(true)
@@ -103,10 +106,7 @@ export default function AppLayout({
           setSocketReady(true)
         }
       })
-      .catch(() => {
-        setSocketReady(true)
-        refreshTokenRequested.current = false
-      })
+      .catch(() => setSocketReady(true))
   }, [nickname, socketReady])
 
   const handleLogout = () => {
@@ -123,7 +123,10 @@ export default function AppLayout({
       return <main>{children}</main>
     }
     if (status !== 'loading' && !session) {
-      router.push('/')
+      if (!redirectToLoginDone.current) {
+        redirectToLoginDone.current = true
+        router.push('/')
+      }
       return null
     }
     return (
