@@ -114,7 +114,15 @@ export default function AppLayout({
     if (pathname === '/app/complete-profile') {
       return <main>{children}</main>
     }
-    return null
+    if (status !== 'loading' && !session) {
+      router.push('/')
+      return null
+    }
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+      </main>
+    )
   }
 
   return (
