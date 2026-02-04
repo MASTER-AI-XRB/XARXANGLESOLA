@@ -58,6 +58,26 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, nickname])
 
+  useEffect(() => {
+    const onProductState = (e: Event) => {
+      const { productId, reserved, reservedBy, prestec } = (e as CustomEvent).detail || {}
+      if (!productId) return
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id !== productId
+            ? p
+            : {
+                ...p,
+                ...(typeof reserved === 'boolean' && { reserved, reservedBy: reservedBy ?? null }),
+                ...(typeof prestec === 'boolean' && { prestec }),
+              }
+        )
+      )
+    }
+    window.addEventListener('product-state', onProductState)
+    return () => window.removeEventListener('product-state', onProductState)
+  }, [])
+
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products', { cache: 'no-store' })
@@ -123,7 +143,8 @@ export default function ProductsPage() {
         productsList.map(async (product) => {
           try {
             const response = await fetch(
-              `/api/favorites/check?productId=${product.id}`
+              `/api/favorites/check?productId=${product.id}`,
+              { cache: 'no-store' }
             )
             if (response.ok) {
               const data = await response.json()
@@ -154,41 +175,36 @@ export default function ProductsPage() {
     const isFavorite = favorites.has(productId)
     logInfo(`Toggle favorite per producte ${productId}, actualment és favorit: ${isFavorite}`)
 
+    // Optimistic: canviar icona al moment
+    const prevFavorites = new Set(favorites)
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      if (isFavorite) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+
     try {
-      let response
-      if (isFavorite) {
-        logInfo(`Eliminant preferit: productId=${productId}`)
-        response = await fetch('/api/favorites', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId }),
-        })
-      } else {
-        logInfo(`Afegint preferit: productId=${productId}`)
-        response = await fetch('/api/favorites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId }),
-        })
-      }
+      const response = isFavorite
+        ? await fetch('/api/favorites', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId }),
+          })
+        : await fetch('/api/favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId }),
+          })
 
       const responseData = await response.json()
-      logInfo(`Resposta de l'API:`, responseData)
-
-      if (response.ok) {
-        logInfo('Operació exitosa, refrescant estat...')
-        setFavorites((prev) => {
-          const next = new Set(prev)
-          if (isFavorite) next.delete(productId)
-          else next.add(productId)
-          return next
-        })
-        await fetchProducts()
-      } else {
+      if (!response.ok) {
+        setFavorites(prevFavorites)
         logError(`Error ${isFavorite ? 'eliminant' : 'afegint'} preferit:`, responseData)
         alert(`Error: ${responseData.error || 'Error desconegut'}`)
       }
     } catch (error) {
+      setFavorites(prevFavorites)
       logError('Error actualitzant preferit:', error)
       alert('Error de connexió. Torna-ho a intentar.')
     }
@@ -230,28 +246,45 @@ export default function ProductsPage() {
     if (!product || (!canReserve(product) && !canUnreserve(product))) return
     const nextReserved = !product.reserved
 
+    // Optimistic: canviar icona al moment
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              reserved: nextReserved,
+              reservedBy: nextReserved && nickname ? { nickname } : null,
+            }
+          : p
+      )
+    )
+
     try {
       const response = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reserved: nextReserved }),
       })
-      if (response.ok) {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        logError('Error actualitzant reserva:', data)
         setProducts((prev) =>
           prev.map((p) =>
             p.id === productId
-              ? {
-                  ...p,
-                  reserved: nextReserved,
-                  reservedBy: nextReserved && nickname ? { nickname } : null,
-                }
+              ? { ...p, reserved: product.reserved, reservedBy: product.reservedBy }
               : p
           )
         )
-        fetchProducts()
       }
     } catch (error) {
       logError('Error actualitzant reserva:', error)
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? { ...p, reserved: product.reserved, reservedBy: product.reservedBy }
+            : p
+        )
+      )
     }
   }
 

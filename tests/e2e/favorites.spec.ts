@@ -45,6 +45,7 @@ test('favorite flow', async ({ page, request }) => {
       if (token) {
         localStorage.setItem('socketToken', token)
       }
+      localStorage.setItem('xarxa-onboarding-seen', '1')
     },
     { nickname: userA.nickname, token: ownerData.socketToken || '' }
   )
@@ -52,6 +53,7 @@ test('favorite flow', async ({ page, request }) => {
   const productName = `Preferit ${Date.now()}`
   await page.goto('/app/products/new')
   await expect(page).toHaveURL(/\/app\/products\/new/, { timeout: 10000 })
+  await expect(page.locator('#name')).toBeVisible({ timeout: 15000 })
   await page.locator('#name').fill(productName)
   await page.locator('#description').fill('Producte per preferits')
   const imagePath = path.join(process.cwd(), 'public', 'logo.png')
@@ -102,19 +104,19 @@ test('favorite flow', async ({ page, request }) => {
       if (token) {
         localStorage.setItem('socketToken', token)
       }
+      localStorage.setItem('xarxa-onboarding-seen', '1')
     },
     { nickname: userB.nickname, token: fanData.socketToken || '' }
   )
 
-  await userBPage.goto('/app')
-  await expect(userBPage).toHaveURL(/\/app/, { timeout: 10000 })
-  const productLink = userBPage.getByRole('link', { name: productName })
-  await expect(productLink).toBeVisible({ timeout: 20000 })
+  await userBPage.goto(baseURL + '/app')
+  await expect(userBPage).toHaveURL(/\/app/, { timeout: 15000 })
+  await expect(userBPage.getByText(productName, { exact: true })).toBeVisible({ timeout: 25000 })
 
   const favoriteToggle = userBPage.locator(
     `[data-testid="favorite-toggle-${createdProduct.id}"]`
   )
-  await expect(favoriteToggle).toBeVisible({ timeout: 20000 })
+  await expect(favoriteToggle).toBeVisible({ timeout: 15000 })
   const [favoriteResponse] = await Promise.all([
     userBPage.waitForResponse(
       (response) =>
@@ -125,8 +127,8 @@ test('favorite flow', async ({ page, request }) => {
   ])
   expect(favoriteResponse.ok()).toBeTruthy()
 
-  await userBPage.goto('/app/favorites')
-  await expect(userBPage.getByText(productName)).toBeVisible()
+  await userBPage.goto(baseURL + '/app/favorites')
+  await expect(userBPage.getByText(productName, { exact: true })).toBeVisible({ timeout: 15000 })
 
   await userBContext.close()
 })

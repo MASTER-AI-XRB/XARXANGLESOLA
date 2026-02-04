@@ -46,6 +46,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [productId])
 
+  useEffect(() => {
+    if (!productId) return
+    const onProductState = (e: Event) => {
+      const { productId: id, reserved, reservedBy, prestec } = (e as CustomEvent).detail || {}
+      if (id !== productId) return
+      setProduct((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...(typeof reserved === 'boolean' && { reserved, reservedBy: reservedBy ?? null }),
+              ...(typeof prestec === 'boolean' && { prestec }),
+            }
+          : null
+      )
+    }
+    window.addEventListener('product-state', onProductState)
+    return () => window.removeEventListener('product-state', onProductState)
+  }, [productId])
+
   const fetchProduct = async () => {
     if (!productId) return
     try {
@@ -76,6 +95,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const toggleReserved = async () => {
     if (!product || (!canReserve && !canUnreserve)) return
     const nextReserved = !product.reserved
+    const prevProduct = product
+
+    // Optimistic: canviar icona al moment
+    setProduct((prev) =>
+      prev
+        ? {
+            ...prev,
+            reserved: nextReserved,
+            reservedBy: nextReserved && nickname ? { nickname } : null,
+          }
+        : null
+    )
 
     try {
       const response = await fetch(`/api/products/${product.id}/reserve`, {
@@ -83,19 +114,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reserved: nextReserved }),
       })
-      if (response.ok) {
-        setProduct((prev) =>
-          prev
-            ? {
-                ...prev,
-                reserved: nextReserved,
-                reservedBy: nextReserved && nickname ? { nickname } : null,
-              }
-            : null
-        )
-        fetchProduct()
+      if (!response.ok) {
+        setProduct(prevProduct)
+        logError('Error actualitzant reserva:', await response.json().catch(() => ({})))
       }
     } catch (error) {
+      setProduct(prevProduct)
       logError('Error actualitzant reserva:', error)
     }
   }

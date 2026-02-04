@@ -288,6 +288,47 @@ app.prepare().then(() => {
     return matchesNickname || matchesKeyword
   }
 
+  const handleBroadcastProductState = async (req, res, ioInstance) => {
+    if (!ioInstance) return false
+    const urlPath = req.url && req.url.split('?')[0]
+    if (req.method !== 'POST' && req.method !== 'OPTIONS') return false
+    if (urlPath !== '/broadcast-product-state') return false
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-notify-token')
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200)
+      res.end()
+      return true
+    }
+    if (notifySecret) {
+      const requestToken = req.headers['x-notify-token']
+      if (requestToken !== notifySecret) {
+        res.writeHead(401, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, error: 'Unauthorized' }))
+        return true
+      }
+    }
+    try {
+      const data = await parseJsonBody(req)
+      const { productId, reserved, reservedBy, prestec } = data
+      if (productId != null) {
+        ioInstance.emit('product-state', {
+          productId,
+          reserved: !!reserved,
+          reservedBy: reservedBy || null,
+          prestec,
+        })
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ success: true }))
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }))
+    }
+    return true
+  }
+
   const handleNotifyRequest = async (req, res, ioInstance) => {
     if (!ioInstance) {
       return false
@@ -695,9 +736,14 @@ app.prepare().then(() => {
     const ioDev = new Server(socketServer, socketOptions)
     setupSocketHandlers(ioDev)
     socketServer.on('request', (req, res) => {
-      handleNotifyRequest(req, res, ioDev).catch((error) => {
-        logError('Error gestionant /notify:', error)
-      })
+      handleBroadcastProductState(req, res, ioDev)
+        .then((handled) => {
+          if (handled) return
+          return handleNotifyRequest(req, res, ioDev)
+        })
+        .catch((error) => {
+          logError('Error gestionant request socket:', error)
+        })
     })
     socketServer.listen(socketPort, hostname, (err) => {
       if (err) throw err
@@ -709,6 +755,9 @@ app.prepare().then(() => {
     let io
     const server = createServer(async (req, res) => {
       if (req.url && req.url.startsWith('/socket.io/')) {
+        return
+      }
+      if (await handleBroadcastProductState(req, res, io)) {
         return
       }
       if (await handleNotifyRequest(req, res, io)) {

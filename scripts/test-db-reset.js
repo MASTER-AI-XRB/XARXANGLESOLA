@@ -32,7 +32,7 @@ const prismaCommand = process.platform === 'win32'
 
 const result = spawnSync(
   prismaCommand,
-  ['db', 'push', '--force-reset', '--accept-data-loss'],
+  ['db', 'push', '--force-reset', '--accept-data-loss', '--skip-generate'],
   {
     stdio: 'inherit',
     env: process.env,

@@ -498,7 +498,10 @@ io.on('connection', (socket) => {
       return
     }
 
-    if (req.method !== 'POST' || req.url !== '/notify') {
+    const urlPath = req.url && req.url.split('?')[0]
+    const isNotifyPath = urlPath === '/notify'
+    const isBroadcastPath = urlPath === '/broadcast-product-state'
+    if (req.method !== 'POST' || (!isNotifyPath && !isBroadcastPath)) {
       res.writeHead(404)
       res.end('Not found')
       return
@@ -519,6 +522,15 @@ io.on('connection', (socket) => {
     req.on('end', async () => {
       try {
         const data = JSON.parse(body || '{}')
+        if (isBroadcastPath) {
+          const { productId, reserved, reservedBy, prestec } = data
+          if (productId != null) {
+            io.emit('product-state', { productId, reserved: !!reserved, reservedBy: reservedBy || null, prestec })
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: true }))
+          return
+        }
         const {
           targetUserId,
           type,

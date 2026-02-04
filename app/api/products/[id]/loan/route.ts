@@ -56,6 +56,22 @@ export async function PATCH(
       data: { prestec: prestec },
     })
 
+    const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim().replace(/\/$/, '')
+    const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
+    if (socketUrl && notifySecret) {
+      fetch(`${socketUrl}/broadcast-product-state`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-notify-token': notifySecret,
+        },
+        body: JSON.stringify({
+          productId: resolvedParams.id,
+          prestec: updatedProduct.prestec,
+        }),
+      }).catch(() => {})
+    }
+
     return apiOk({ prestec: updatedProduct.prestec })
   } catch (error) {
     logError('Error actualitzant préstec:', error)

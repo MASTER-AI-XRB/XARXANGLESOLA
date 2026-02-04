@@ -97,6 +97,12 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       })
     })
 
+    s.on('product-state', (data: { productId: string; reserved?: boolean; reservedBy?: { nickname: string } | null; prestec?: boolean }) => {
+      if (typeof window !== 'undefined' && data?.productId) {
+        window.dispatchEvent(new CustomEvent('product-state', { detail: data }))
+      }
+    })
+
     setSocket(s)
     return () => {
       s.close()

@@ -43,6 +43,26 @@ export default function FavoritesPage() {
     fetchFavorites()
   }, [router, nickname])
 
+  useEffect(() => {
+    const onProductState = (e: Event) => {
+      const { productId, reserved, reservedBy, prestec } = (e as CustomEvent).detail || {}
+      if (!productId) return
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id !== productId
+            ? p
+            : {
+                ...p,
+                ...(typeof reserved === 'boolean' && { reserved, reservedBy: reservedBy ?? null }),
+                ...(typeof prestec === 'boolean' && { prestec }),
+              }
+        )
+      )
+    }
+    window.addEventListener('product-state', onProductState)
+    return () => window.removeEventListener('product-state', onProductState)
+  }, [])
+
   const fetchFavorites = async () => {
     try {
       const response = await fetch('/api/favorites', { cache: 'no-store' })
@@ -90,27 +110,43 @@ export default function FavoritesPage() {
     const product = products.find((p) => p.id === productId)
     if (!product || !canUnreserve(product)) return
     const nextReserved = !product.reserved
+
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              reserved: nextReserved,
+              reservedBy: nextReserved && nickname ? { nickname } : null,
+            }
+          : p
+      )
+    )
+
     try {
       const res = await fetch(`/api/products/${productId}/reserve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reserved: nextReserved }),
       })
-      if (res.ok) {
+      if (!res.ok) {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === productId
-              ? {
-                  ...p,
-                  reserved: nextReserved,
-                  reservedBy: nextReserved && nickname ? { nickname } : null,
-                }
+              ? { ...p, reserved: product.reserved, reservedBy: product.reservedBy }
               : p
           )
         )
-        fetchFavorites()
+        logError('Error actualitzant reserva:', await res.json().catch(() => ({})))
       }
     } catch (err) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? { ...p, reserved: product.reserved, reservedBy: product.reservedBy }
+            : p
+        )
+      )
       logError('Error actualitzant reserva:', err)
     }
   }

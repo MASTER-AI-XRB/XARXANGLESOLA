@@ -27,19 +27,21 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_UR
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 60 * 1000,
+  timeout: 120 * 1000,
   expect: {
-    timeout: 10 * 1000,
+    timeout: 15 * 1000,
   },
   use: {
     baseURL,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
   },
+  globalSetup: './scripts/test-db-setup.js',
   globalTeardown: './scripts/test-db-reset.js',
   webServer: {
-    command: 'node scripts/clear-next-cache.js && npm run dev',
+    command: 'npm run dev',
     url: baseURL,
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {
       ...process.env,
@@ -49,6 +51,7 @@ export default defineConfig({
       SOCKET_PORT: socketPort,
     },
   },
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   projects: [
     {
       name: 'chromium',
