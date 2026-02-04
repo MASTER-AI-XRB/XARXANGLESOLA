@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
@@ -48,11 +48,13 @@ export default function ChatPage() {
   const [hasRestoredChats, setHasRestoredChats] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const activePrivateProductIdRef = useRef<string | null>(null)
+  const productIdFromUrlRef = useRef<string | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
   
   const nickname = getStoredNickname()
+  const searchParams = useSearchParams()
   const { t, locale } = useI18n()
   const { showInfo } = useNotifications()
   const router = useRouter()
@@ -93,22 +95,41 @@ export default function ChatPage() {
     if (!nickname || typeof window === 'undefined') return
 
     setHasRestoredChats(false)
+    productIdFromUrlRef.current = null
+
+    const urlNickname = searchParams.get('nickname')
+    const urlProductId = searchParams.get('productId')
 
     const openChatsKey = `chat:${nickname}:openPrivateChats`
     const activeChatKey = `chat:${nickname}:activePrivateChat`
     const activeProductKey = `chat:${nickname}:activePrivateProduct`
 
     const storedOpen = window.localStorage.getItem(openChatsKey)
+    let openList: string[] = []
     if (storedOpen) {
       try {
         const parsed = JSON.parse(storedOpen)
         if (Array.isArray(parsed)) {
-          setOpenPrivateChats(parsed.filter((item) => typeof item === 'string'))
+          openList = parsed.filter((item) => typeof item === 'string')
         }
       } catch {
         window.localStorage.removeItem(openChatsKey)
       }
     }
+
+    if (urlNickname) {
+      productIdFromUrlRef.current = urlProductId || null
+      setActivePrivateChat(urlNickname)
+      setActivePrivateTab(urlProductId || 'general')
+      setOpenPrivateChats((prev) => {
+        const next = openList.length ? openList : prev
+        return next.includes(urlNickname) ? next : [...next, urlNickname]
+      })
+      setHasRestoredChats(true)
+      return
+    }
+
+    if (openList.length) setOpenPrivateChats(openList)
 
     const storedActive = window.localStorage.getItem(activeChatKey)
     if (storedActive) {
@@ -124,7 +145,7 @@ export default function ChatPage() {
     }
 
     setHasRestoredChats(true)
-  }, [nickname])
+  }, [nickname, searchParams])
 
   useEffect(() => {
     if (!activePrivateChat) {
@@ -144,7 +165,8 @@ export default function ChatPage() {
         const hasActiveProduct = cachedProducts.some(
           (product) => product.id === activePrivateTab
         )
-        if (!hasActiveProduct) {
+        const isFromUrl = productIdFromUrlRef.current === activePrivateTab
+        if (!hasActiveProduct && !isFromUrl) {
           setActivePrivateTab('general')
         }
       }
@@ -198,11 +220,29 @@ export default function ChatPage() {
     }
 
     fetchProductsForUser()
-      .then((products) => {
+      .then(async (products) => {
         if (isCancelled) return
+        let list = Array.isArray(products) ? products : []
+        const wantedProductId = activePrivateTab !== 'general' ? activePrivateTab : null
+        const isFromUrl = wantedProductId && productIdFromUrlRef.current === wantedProductId
+        if (wantedProductId && !list.some((p) => p.id === wantedProductId)) {
+          if (isFromUrl) {
+            try {
+              const r = await fetch(`/api/products/${wantedProductId}`, { cache: 'no-store' })
+              if (r.ok) {
+                const one = await r.json()
+                if (one?.id && one?.user?.nickname?.toLowerCase() === activePrivateChat.toLowerCase()) {
+                  list = [{ id: one.id, name: one.name ?? '', images: one.images ?? [] }, ...list]
+                }
+              }
+            } catch {
+              /* ignora */
+            }
+          }
+        }
         setPrivateChatProducts((prev) => ({
           ...prev,
-          [activePrivateChat]: Array.isArray(products) ? products : [],
+          [activePrivateChat]: list,
         }))
         setPrivateChatProductsFetched((prev) => ({
           ...prev,
@@ -213,9 +253,8 @@ export default function ChatPage() {
           return
         }
         if (activePrivateTab !== 'general') {
-          const hasActiveProduct = Array.isArray(products)
-            && products.some((product) => product.id === activePrivateTab)
-          if (!hasActiveProduct) {
+          const hasActiveProduct = list.some((product) => product.id === activePrivateTab)
+          if (!hasActiveProduct && !isFromUrl) {
             setActivePrivateTab('general')
           }
         }
@@ -589,23 +628,10 @@ export default function ChatPage() {
 
     setSocket(newSocket)
 
-    const urlParams = new URLSearchParams(window.location.search)
-    const targetNickname = urlParams.get('nickname')
-    const targetProductId = urlParams.get('productId')
-    if (targetNickname) {
-      if (targetProductId && nickname && nickname !== targetNickname) {
-        fetch(`/api/products/${targetProductId}/reserve-on-dm-open`, { method: 'POST' }).catch(() => {})
-      }
-      setTimeout(() => {
-        setActivePrivateChat(targetNickname)
-        setActivePrivateTab(targetProductId || 'general')
-        setOpenPrivateChats((prev) => {
-          if (!prev.includes(targetNickname)) {
-            return [...prev, targetNickname]
-          }
-          return prev
-        })
-      }, 100)
+    const targetNickname = searchParams.get('nickname')
+    const targetProductId = searchParams.get('productId')
+    if (targetNickname && targetProductId && nickname && nickname !== targetNickname) {
+      fetch(`/api/products/${targetProductId}/reserve-on-dm-open`, { method: 'POST' }).catch(() => {})
     }
 
     return () => {
