@@ -80,7 +80,7 @@ export async function PATCH(
             reservedBy,
           }),
         })
-          .then((r) => {
+          .then(async (r) => {
             if (!r.ok) {
               logWarn('Broadcast product-state (reserve) fallit:', r.status, await r.text().catch(() => ''))
             }
@@ -170,7 +170,7 @@ export async function PATCH(
           reservedBy: null,
         }),
       })
-        .then((r) => {
+        .then(async (r) => {
           if (!r.ok) {
             logWarn('Broadcast product-state (unreserve) fallit:', r.status, await r.text().catch(() => ''))
           }
