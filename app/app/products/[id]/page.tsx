@@ -65,6 +65,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return () => window.removeEventListener('product-state', onProductState)
   }, [productId])
 
+  // Refetch quan la pestanya torna a ser visible (fallback si el WebSocket no ha arribat)
+  useEffect(() => {
+    if (!productId) return
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchProduct()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [productId])
+
   const fetchProduct = async () => {
     if (!productId) return
     try {

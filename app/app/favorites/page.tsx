@@ -63,6 +63,15 @@ export default function FavoritesPage() {
     return () => window.removeEventListener('product-state', onProductState)
   }, [])
 
+  // Refetch quan la pestanya torna a ser visible (fallback si el WebSocket no ha arribat)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchFavorites()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
   const fetchFavorites = async () => {
     try {
       const response = await fetch('/api/favorites', { cache: 'no-store' })

@@ -64,6 +64,15 @@ export default function MyProductsPage() {
     return () => window.removeEventListener('product-state', onProductState)
   }, [])
 
+  // Refetch quan la pestanya torna a ser visible (fallback si el WebSocket no ha arribat)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchMyProducts()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
   const fetchMyProducts = async () => {
     try {
       const response = await fetch('/api/products/my', { cache: 'no-store' })

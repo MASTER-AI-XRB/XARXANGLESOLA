@@ -78,6 +78,16 @@ export default function ProductsPage() {
     return () => window.removeEventListener('product-state', onProductState)
   }, [])
 
+  // Refetch quan la pestanya torna a ser visible (fallback si el WebSocket no ha arribat)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchProducts()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- només registrar listener una vegada
+  }, [])
+
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products', { cache: 'no-store' })
