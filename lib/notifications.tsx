@@ -10,6 +10,15 @@ export interface NavAlert {
   title: string
   message: string
   read: boolean
+  /** Tipus d’icona (reserved_favorite, unreserved_favorite, loan_started, loan_ended, etc.) */
+  notificationType?: string
+  /** true = reserva/desreserva del propietari (icona blava); false/undefined = per DM (icona groga) */
+  ownerReserve?: boolean
+  /** Claus per traduir segons l’idioma actual (titleKey, messageKey, params) */
+  titleKey?: string
+  messageKey?: string
+  params?: Record<string, string | number>
+  actionLabelKey?: string
   action?: { url: string; label?: string }
   createdAt: number
 }
@@ -138,6 +147,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       id,
       read: false,
       createdAt: Date.now(),
+      notificationType: alert.notificationType,
+      ownerReserve: alert.ownerReserve,
+      titleKey: alert.titleKey,
+      messageKey: alert.messageKey,
+      params: alert.params,
+      actionLabelKey: alert.actionLabelKey,
     }
     setAlerts((prev) => [newAlert, ...prev].slice(0, MAX_ALERTS))
   }, [])

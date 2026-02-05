@@ -111,6 +111,7 @@ export async function PATCH(
                     title: 'Producte reservat',
                     message: `${actorNickname} ha reservat un producte dels teus preferits: ${productName}`,
                     notificationType: 'reserved_favorite',
+                    ownerReserve: true,
                     actorNickname,
                     productName,
                     action: { labelKey: 'notifications.viewProduct', label: 'Veure producte', url: `/app/products/${productId}` },
@@ -155,7 +156,7 @@ export async function PATCH(
       product.reservedById === authUserId ||
       (product.reservedById == null && product.userId === authUserId)
     if (!mayUnreserve) {
-      return apiError('Només qui ha sol·licitat la reserva pot desreservar', 403)
+      return apiError('Només qui ha sol·licitat la reserva pot finalitzar-la', 403)
     }
     const updated = await prisma.product.update({
       where: { id: resolvedParams.id },
@@ -219,9 +220,10 @@ export async function PATCH(
                       titleKey: 'notifications.productUnreservedFromFavorites',
                       messageKey: 'notifications.productUnreservedFromFavoritesMessage',
                       params: { nickname, productName: product.name },
-                      title: 'Producte desreservat',
-                      message: `${nickname} ha desreservat un producte dels teus preferits: ${product.name}`,
+                      title: 'Finalitzada la reserva',
+                      message: `${nickname} ha finalitzat la reserva d'un producte dels teus preferits: ${product.name}`,
                       notificationType: 'unreserved_favorite',
+                      ownerReserve: true,
                       actorNickname: nickname,
                       productName: product.name,
                       action: { labelKey: 'notifications.viewProduct', label: 'Veure producte', url: `/app/products/${resolvedParams.id}` },

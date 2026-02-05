@@ -541,6 +541,7 @@ io.on('connection', (socket) => {
           messageKey,
           params,
           notificationType,
+          ownerReserve,
           actorNickname,
           productName,
           productType,
@@ -579,6 +580,8 @@ io.on('connection', (socket) => {
             params: params || (actorNickname != null || productName != null ? { nickname: actorNickname ?? '', productName: productName ?? '' } : undefined),
             actorNickname,
             productName,
+            notificationType,
+            ownerReserve: ownerReserve === true,
           })
           console.log('[notify] Enviat via socket:', targetUserId)
           res.writeHead(200, { 'Content-Type': 'application/json' })

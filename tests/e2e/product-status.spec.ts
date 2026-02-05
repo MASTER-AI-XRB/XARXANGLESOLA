@@ -78,7 +78,7 @@ test('reserve and prestec toggles', async ({ page, request }) => {
     throw new Error(`Reserva fallida: ${reserveResponse.status()} ${await reserveResponse.text()}`)
   }
   await expect(page.getByText(/Reservat/i)).toBeVisible({ timeout: 10000 })
-  await expect(reserveButton).toHaveAttribute('aria-label', /Desreservar/i)
+  await expect(reserveButton).toHaveAttribute('aria-label', /Finalitzar la reserva/i)
 
   const [unreserveResponse] = await Promise.all([
     page.waitForResponse((response) =>

@@ -372,6 +372,7 @@ app.prepare().then(() => {
         messageKey,
         params,
         notificationType,
+        ownerReserve,
         actorNickname,
         productName,
         productType,
@@ -413,6 +414,8 @@ app.prepare().then(() => {
           params: params || (actorNickname != null || productName != null ? { nickname: actorNickname ?? '', productName: productName ?? '' } : undefined),
           actorNickname,
           productName,
+          notificationType,
+          ownerReserve: ownerReserve === true,
         })
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ success: true }))

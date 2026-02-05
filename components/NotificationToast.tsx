@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
+
+export type NotificationIconType = 'prestec_on' | 'prestec_off' | 'reserve_on' | 'reserve_off'
 
 export interface Notification {
   id: string
@@ -9,6 +12,10 @@ export interface Notification {
   title: string
   message: string
   duration?: number
+  /** Tipus d’icona a la dreta (prèstec o reserva, actiu/inactiu) */
+  notificationType?: string
+  /** true = reserva/desreserva del propietari (icona blava); false/undefined = per DM (icona groga) */
+  ownerReserve?: boolean
   action?: {
     label: string
     onClick: () => void
@@ -74,6 +81,52 @@ export default function NotificationToast({ notification, onClose }: Notificatio
     ),
   }
 
+  const notificationTypeToIcon = (nt?: string, ownerReserve?: boolean) => {
+    if (!nt) return null
+    const isOwnerReserve = ownerReserve === true
+    if (nt === 'loan_started') {
+      return (
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 shrink-0 p-1.5" aria-hidden>
+          <Image src="/prestec_on.png" alt="" width={20} height={20} className="object-contain" />
+        </span>
+      )
+    }
+    if (nt === 'loan_ended') {
+      return (
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/25 shrink-0 p-1.5" aria-hidden>
+          <Image src="/prestec_off.png" alt="" width={20} height={20} className="object-contain opacity-95" />
+        </span>
+      )
+    }
+    if (nt === 'reserved_favorite') {
+      return (
+        <span
+          className={`flex items-center justify-center w-8 h-8 rounded-full text-white shrink-0 p-1.5 ${isOwnerReserve ? 'bg-blue-500' : 'bg-yellow-500'}`}
+          aria-hidden
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+          </svg>
+        </span>
+      )
+    }
+    if (nt === 'unreserved_favorite') {
+      return (
+        <span
+          className={`flex items-center justify-center w-8 h-8 rounded-full border-2 shrink-0 p-1.5 ${
+            isOwnerReserve ? 'border-blue-400 bg-white/20 text-blue-200' : 'border-yellow-400 bg-white/20 text-yellow-200'
+          }`}
+          aria-hidden
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </span>
+      )
+    }
+    return null
+  }
+
   return (
     <div className="max-w-sm w-full animate-slide-in-right pointer-events-auto">
       <div
@@ -101,6 +154,11 @@ export default function NotificationToast({ notification, onClose }: Notificatio
             </button>
           )}
         </div>
+        {notificationTypeToIcon(notification.notificationType, notification.ownerReserve) && (
+          <div className="flex-shrink-0 flex items-center">
+            {notificationTypeToIcon(notification.notificationType, notification.ownerReserve)}
+          </div>
+        )}
         <button
           onClick={onClose}
           className="flex-shrink-0 opacity-75 hover:opacity-100 transition"

@@ -90,6 +90,8 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       params?: Record<string, string>
       actorNickname?: string
       productName?: string
+      notificationType?: string
+      ownerReserve?: boolean
       action?: { label?: string; labelKey?: string; url?: string }
     }) => {
       const r = routerRef.current
@@ -128,6 +130,8 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       if (!message) message = ' '
       sh(title, message, {
         type: (data.type as 'info' | 'success' | 'warning' | 'error') || 'info',
+        notificationType: data.notificationType,
+        ownerReserve: data.ownerReserve === true,
         action: data.action?.url
           ? {
               label: actionLabel,
@@ -138,6 +142,12 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       addA({
         title,
         message,
+        notificationType: data.notificationType,
+        ownerReserve: data.ownerReserve === true,
+        titleKey: data.titleKey,
+        messageKey: data.messageKey,
+        params: Object.keys(params).length ? params : undefined,
+        actionLabelKey: data.action?.labelKey,
         action: data.action?.url ? { url: data.action.url, label: actionLabel } : undefined,
       })
     })

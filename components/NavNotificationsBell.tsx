@@ -7,6 +7,54 @@ import { useNotifications } from '@/lib/notifications'
 import { useI18n } from '@/lib/i18n'
 import NotificationSettings from '@/components/NotificationSettings'
 
+function NotificationTypeIcon({ notificationType, ownerReserve }: { notificationType?: string; ownerReserve?: boolean }) {
+  if (!notificationType) return null
+  const isOwnerReserve = ownerReserve === true
+  if (notificationType === 'loan_started') {
+    return (
+      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white shrink-0 p-1.5" aria-hidden>
+        <img src="/prestec_on.png" alt="" className="w-full h-full object-contain" width={20} height={20} />
+      </span>
+    )
+  }
+  if (notificationType === 'loan_ended') {
+    return (
+      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 shrink-0 p-1.5" aria-hidden>
+        <img src="/prestec_off.png" alt="" className="w-full h-full object-contain opacity-90" width={20} height={20} />
+      </span>
+    )
+  }
+  if (notificationType === 'reserved_favorite') {
+    return (
+      <span
+        className={`flex items-center justify-center w-8 h-8 rounded-full text-white shrink-0 p-1.5 ${isOwnerReserve ? 'bg-blue-500' : 'bg-yellow-500'}`}
+        aria-hidden
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+        </svg>
+      </span>
+    )
+  }
+  if (notificationType === 'unreserved_favorite') {
+    return (
+      <span
+        className={`flex items-center justify-center w-8 h-8 rounded-full border-2 shrink-0 p-1.5 ${
+          isOwnerReserve
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+            : 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
+        }`}
+        aria-hidden
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+      </span>
+    )
+  }
+  return null
+}
+
 const DROPDOWN_GAP = 4
 
 export function NavNotificationsBell() {
@@ -144,12 +192,27 @@ title={t('nav.markAllNotificationsRead')}
                 </p>
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {alerts.map((alert) => (
+                  {alerts.map((alert) => {
+                    const displayTitle =
+                      alert.titleKey && typeof t === 'function'
+                        ? (() => {
+                            const x = t(alert.titleKey!)
+                            return x && x.trim() && x !== alert.titleKey ? x : alert.title
+                          })()
+                        : alert.title
+                    const displayMessage =
+                      alert.messageKey && typeof t === 'function'
+                        ? (() => {
+                            const x = t(alert.messageKey!, (alert.params ?? {}) as Record<string, string | number>)
+                            return x && x.trim() && x !== alert.messageKey ? x : alert.message
+                          })()
+                        : alert.message
+                    return (
                     <li key={alert.id} className="relative">
                       <button
                         type="button"
                         onClick={() => handleAlertClick(alert.id, alert.action?.url)}
-                        className={`w-full text-left pl-3 pr-8 py-2.5 transition ${
+                        className={`w-full text-left pl-3 pr-12 py-2.5 transition ${
                           !alert.read
                             ? 'bg-gray-100 dark:bg-gray-700/70 hover:bg-gray-200 dark:hover:bg-gray-700'
                             : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
@@ -162,32 +225,38 @@ title={t('nav.markAllNotificationsRead')}
                               : 'text-gray-900 dark:text-white font-semibold'
                           }`}
                         >
-                          {alert.title}
+                          {displayTitle}
                         </p>
                         <p
                           className={`text-xs mt-0.5 line-clamp-2 ${
                             alert.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
                           }`}
                         >
-                          {alert.message}
+                          {displayMessage}
                         </p>
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          removeAlert(alert.id)
-                        }}
-                        className="absolute top-1.5 right-1.5 p-1 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                        title={t('nav.deleteNotification')}
-                        aria-label={t('nav.deleteNotification')}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                      <div className="absolute top-1.5 right-1.5 flex flex-col items-center gap-1.5 min-w-[28px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeAlert(alert.id)
+                          }}
+                          className="p-1 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition shrink-0"
+                          title={t('nav.deleteNotification')}
+                          aria-label={t('nav.deleteNotification')}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="flex items-center justify-center w-8 h-8 shrink-0 min-h-[32px]" aria-hidden>
+                          <NotificationTypeIcon notificationType={alert.notificationType} ownerReserve={alert.ownerReserve} />
+                        </div>
+                      </div>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               )}
             </div>
