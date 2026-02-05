@@ -53,7 +53,7 @@ export default function ChatPage() {
   const productIdFromUrlRef = useRef<string | null>(null)
   const confettiFiredForProductRef = useRef<string | null>(null)
   const refetchForProductUrlDoneRef = useRef<string | null>(null)
-  const confettiModuleRef = useRef<typeof import('canvas-confetti')['default'] | null>(null)
+  const confettiModuleRef = useRef<((opts?: object) => void) | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
@@ -393,8 +393,9 @@ export default function ChatPage() {
         return
       }
       import('canvas-confetti')
-        .then((mod) => {
-          fireConfetti(mod.default)
+        .then((mod: { default?: (opts?: object) => void }) => {
+          const fn = mod.default ?? (mod as unknown as (opts?: object) => void)
+          fireConfetti(fn)
         })
         .catch((err) => {
           confettiFiredForProductRef.current = null
@@ -406,7 +407,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    import('canvas-confetti').then((mod) => { confettiModuleRef.current = mod.default }).catch(() => {})
+    import('canvas-confetti').then((mod: { default?: (opts?: object) => void }) => {
+      confettiModuleRef.current = mod.default ?? (mod as unknown as (opts?: object) => void)
+    }).catch(() => {})
   }, [])
 
   // Refetch de productes quan s’obre des del link (Contactar): la 1a càrrega pot arribar abans que el servidor hagi desat la reserva
@@ -773,7 +776,7 @@ export default function ChatPage() {
     return () => {
       newSocket.close()
     }
-  }, [nickname, activePrivateChat, router, showInfo, t])
+  }, [nickname, activePrivateChat, router, showInfo, t, searchParams])
 
   useEffect(() => {
     scrollToBottom()
