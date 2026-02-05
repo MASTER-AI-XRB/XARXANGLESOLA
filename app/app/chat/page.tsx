@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -54,6 +54,7 @@ export default function ChatPage() {
   const confettiFiredForProductRef = useRef<string | null>(null)
   const refetchForProductUrlDoneRef = useRef<string | null>(null)
   const confettiModuleRef = useRef<((opts?: object) => void) | null>(null)
+  const confettiCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
@@ -363,6 +364,30 @@ export default function ChatPage() {
     return () => window.removeEventListener('product-state', onProductState)
   }, [])
 
+  const getConfettiCanvas = useCallback(() => {
+    if (typeof window === 'undefined') return null
+    let canvas = confettiCanvasRef.current
+    if (!canvas) {
+      canvas = document.createElement('canvas')
+      confettiCanvasRef.current = canvas
+      canvas.style.position = 'fixed'
+      canvas.style.left = '0'
+      canvas.style.top = '0'
+      canvas.style.width = '100vw'
+      canvas.style.height = '100vh'
+      canvas.style.pointerEvents = 'none'
+      canvas.style.zIndex = '9999'
+      document.body.appendChild(canvas)
+    }
+    const w = window.innerWidth
+    const h = window.innerHeight
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w
+      canvas.height = h
+    }
+    return canvas
+  }, [])
+
   useEffect(() => {
     if (typeof window === 'undefined' || !activePrivateChat || !activePrivateTab || activePrivateTab === 'general' || !nickname) {
       if (!activePrivateTab || activePrivateTab === 'general') {
@@ -376,7 +401,13 @@ export default function ChatPage() {
     if (!reservedByYou) return
     if (confettiFiredForProductRef.current === activePrivateTab) return
     confettiFiredForProductRef.current = activePrivateTab
-    const opts = { spread: 100, ticks: 80, origin: { y: 0.6 } as const }
+    const opts = {
+      spread: 120,
+      ticks: 100,
+      particleCount: 120,
+      startVelocity: 40,
+      origin: { x: 0.5, y: 0.5 } as const,
+    }
     const fireConfetti = (confetti: (o: typeof opts & { angle?: number }) => void) => {
       try {
         confetti(opts)
@@ -395,8 +426,9 @@ export default function ChatPage() {
       import('canvas-confetti')
         .then((mod) => {
           const m = mod as { default?: (o?: object) => void; create?: (c?: HTMLCanvasElement, o?: { useWorker?: boolean }) => (o?: object) => void }
-          const fn = typeof m.create === 'function'
-            ? m.create(undefined, { useWorker: false })
+          const canvas = getConfettiCanvas()
+          const fn = typeof m.create === 'function' && canvas
+            ? m.create(canvas, { useWorker: false })
             : (m.default ?? (m as unknown as (o?: object) => void))
           fireConfetti(fn)
         })
@@ -406,7 +438,7 @@ export default function ChatPage() {
         })
     }
     setTimeout(runAfterPaint, 200)
-  }, [activePrivateChat, activePrivateTab, nickname, privateChatProducts])
+  }, [activePrivateChat, activePrivateTab, nickname, privateChatProducts, getConfettiCanvas])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -414,12 +446,13 @@ export default function ChatPage() {
       const m = mod as { default?: (o?: object) => void; create?: (canvas?: HTMLCanvasElement, opts?: { useWorker?: boolean }) => (o?: object) => void }
       const create = m.create
       if (typeof create === 'function') {
-        confettiModuleRef.current = create(undefined, { useWorker: false })
+        const canvas = getConfettiCanvas()
+        confettiModuleRef.current = canvas ? create(canvas, { useWorker: false }) : (m.default ?? (m as unknown as (o?: object) => void))
       } else {
         confettiModuleRef.current = m.default ?? (m as unknown as (o?: object) => void)
       }
     }).catch(() => {})
-  }, [])
+  }, [getConfettiCanvas])
 
   // Refetch de productes quan s’obre des del link (Contactar): la 1a càrrega pot arribar abans que el servidor hagi desat la reserva
   useEffect(() => {
