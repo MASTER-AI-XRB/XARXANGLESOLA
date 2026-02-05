@@ -393,8 +393,11 @@ export default function ChatPage() {
         return
       }
       import('canvas-confetti')
-        .then((mod: { default?: (opts?: object) => void }) => {
-          const fn = mod.default ?? (mod as unknown as (opts?: object) => void)
+        .then((mod) => {
+          const m = mod as { default?: (o?: object) => void; create?: (c?: HTMLCanvasElement, o?: { useWorker?: boolean }) => (o?: object) => void }
+          const fn = typeof m.create === 'function'
+            ? m.create(undefined, { useWorker: false })
+            : (m.default ?? (m as unknown as (o?: object) => void))
           fireConfetti(fn)
         })
         .catch((err) => {
@@ -407,8 +410,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    import('canvas-confetti').then((mod: { default?: (opts?: object) => void }) => {
-      confettiModuleRef.current = mod.default ?? (mod as unknown as (opts?: object) => void)
+    import('canvas-confetti').then((mod) => {
+      const m = mod as { default?: (o?: object) => void; create?: (canvas?: HTMLCanvasElement, opts?: { useWorker?: boolean }) => (o?: object) => void }
+      const create = m.create
+      if (typeof create === 'function') {
+        confettiModuleRef.current = create(undefined, { useWorker: false })
+      } else {
+        confettiModuleRef.current = m.default ?? (m as unknown as (o?: object) => void)
+      }
     }).catch(() => {})
   }, [])
 
