@@ -5,6 +5,7 @@ import { mapProduct } from '@/lib/product-map'
 import { validateUuid } from '@/lib/validation'
 import { apiError, apiOk } from '@/lib/api-response'
 import { logError, logWarn } from '@/lib/logger'
+import { getSocketServerUrl } from '@/lib/socket'
 
 // Funció helper per obtenir instància de Prisma
 function getPrisma() {
