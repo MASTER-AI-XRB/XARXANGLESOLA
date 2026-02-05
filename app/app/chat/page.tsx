@@ -53,6 +53,7 @@ export default function ChatPage() {
   const productIdFromUrlRef = useRef<string | null>(null)
   const confettiFiredForProductRef = useRef<string | null>(null)
   const refetchForProductUrlDoneRef = useRef<string | null>(null)
+  const confettiModuleRef = useRef<typeof import('canvas-confetti')['default'] | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
@@ -375,19 +376,38 @@ export default function ChatPage() {
     if (!reservedByYou) return
     if (confettiFiredForProductRef.current === activePrivateTab) return
     confettiFiredForProductRef.current = activePrivateTab
-    import('canvas-confetti')
-      .then((mod) => {
-        const confetti = mod.default
-        const opts = { spread: 100, ticks: 80, origin: { y: 0.6 } as const }
+    const opts = { spread: 100, ticks: 80, origin: { y: 0.6 } as const }
+    const fireConfetti = (confetti: (o: typeof opts & { angle?: number }) => void) => {
+      try {
         confetti(opts)
         setTimeout(() => confetti({ ...opts, angle: 60 }), 80)
         setTimeout(() => confetti({ ...opts, angle: 120 }), 160)
-      })
-      .catch((err) => {
+      } catch (e) {
         confettiFiredForProductRef.current = null
-        logWarn('Confetti no disponible', err)
-      })
+        logWarn('Confetti error', e)
+      }
+    }
+    const runAfterPaint = () => {
+      if (confettiModuleRef.current) {
+        fireConfetti(confettiModuleRef.current)
+        return
+      }
+      import('canvas-confetti')
+        .then((mod) => {
+          fireConfetti(mod.default)
+        })
+        .catch((err) => {
+          confettiFiredForProductRef.current = null
+          logWarn('Confetti no disponible', err)
+        })
+    }
+    setTimeout(runAfterPaint, 200)
   }, [activePrivateChat, activePrivateTab, nickname, privateChatProducts])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    import('canvas-confetti').then((mod) => { confettiModuleRef.current = mod.default }).catch(() => {})
+  }, [])
 
   // Refetch de productes quan s’obre des del link (Contactar): la 1a càrrega pot arribar abans que el servidor hagi desat la reserva
   useEffect(() => {

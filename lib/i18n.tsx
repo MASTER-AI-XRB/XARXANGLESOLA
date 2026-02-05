@@ -419,6 +419,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'products.description': 'Descripción',
     'products.contact': 'Contactar',
     'products.reserved': 'Reservado',
+    'products.reservedByYou': 'Lo has reservado tú',
     'products.notReserved': 'No reservado',
     'products.unreserved': 'Desreservar',
     'products.favoritesCount': '{count} favoritos',
