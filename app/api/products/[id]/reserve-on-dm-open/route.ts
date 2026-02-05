@@ -96,7 +96,7 @@ export async function POST(
         if (favorites.length === 0) {
           logInfo('Notificacions reserva (DM): cap usuari amb el producte als preferits (excepte qui reserva).')
         } else {
-          logInfo('Notificacions reserva (DM): enviant a', favorites.length, 'usuari(s) amb el producte als preferits.')
+          logInfo(`Notificacions reserva (DM): enviant a ${favorites.length} usuari(s) amb el producte als preferits.`)
           await Promise.all(
             favorites.map((fav) =>
               fetch(`${socketUrl}/notify`, {

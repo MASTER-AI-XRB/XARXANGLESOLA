@@ -93,7 +93,7 @@ export async function PATCH(
           if (favorites.length === 0) {
             logInfo('Notificacions reserva: cap usuari amb el producte als preferits (excepte qui reserva); no s\'envia cap notificació.')
           } else {
-            logInfo('Notificacions reserva: enviant a', favorites.length, 'usuari(s) amb el producte als preferits.')
+            logInfo(`Notificacions reserva: enviant a ${favorites.length} usuari(s) amb el producte als preferits.`)
             await Promise.all(
               favorites.map((fav) =>
                 fetch(`${socketUrl}/notify`, {
