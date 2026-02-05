@@ -5,7 +5,6 @@ import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import confetti from 'canvas-confetti'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
@@ -53,6 +52,7 @@ export default function ChatPage() {
   const activePrivateProductIdRef = useRef<string | null>(null)
   const productIdFromUrlRef = useRef<string | null>(null)
   const confettiFiredForProductRef = useRef<string | null>(null)
+  const refetchForProductUrlDoneRef = useRef<string | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
@@ -375,13 +375,46 @@ export default function ChatPage() {
     if (!reservedByYou) return
     if (confettiFiredForProductRef.current === activePrivateTab) return
     confettiFiredForProductRef.current = activePrivateTab
-    const fire = (opts: confetti.Options) => {
-      confetti({ spread: 100, ticks: 80, origin: { y: 0.6 }, ...opts })
-    }
-    fire({})
-    setTimeout(() => fire({ angle: 60 }), 80)
-    setTimeout(() => fire({ angle: 120 }), 160)
+    import('canvas-confetti')
+      .then((mod) => {
+        const confetti = mod.default
+        const opts = { spread: 100, ticks: 80, origin: { y: 0.6 } as const }
+        confetti(opts)
+        setTimeout(() => confetti({ ...opts, angle: 60 }), 80)
+        setTimeout(() => confetti({ ...opts, angle: 120 }), 160)
+      })
+      .catch((err) => {
+        confettiFiredForProductRef.current = null
+        logWarn('Confetti no disponible', err)
+      })
   }, [activePrivateChat, activePrivateTab, nickname, privateChatProducts])
+
+  // Refetch de productes quan s’obre des del link (Contactar): la 1a càrrega pot arribar abans que el servidor hagi desat la reserva
+  useEffect(() => {
+    const productIdFromUrl = productIdFromUrlRef.current
+    if (!productIdFromUrl || activePrivateTab !== productIdFromUrl || !activePrivateChat || refetchForProductUrlDoneRef.current === productIdFromUrl) return
+    if (!privateChatProductsFetched[activePrivateChat]) return
+    const t = setTimeout(() => {
+      refetchForProductUrlDoneRef.current = productIdFromUrl
+      fetch(`/api/users/${encodeURIComponent(activePrivateChat)}/products`, { cache: 'no-store' })
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          if (!Array.isArray(data)) return
+          setPrivateChatProducts((prev) => ({
+            ...prev,
+            [activePrivateChat]: data.map((p: ProductSummary) => ({
+              id: p.id,
+              name: p.name,
+              images: p.images ?? [],
+              reserved: !!p.reserved,
+              reservedBy: p.reservedBy ?? null,
+            })),
+          }))
+        })
+        .catch(() => {})
+    }, 700)
+    return () => clearTimeout(t)
+  }, [activePrivateChat, activePrivateTab, privateChatProductsFetched])
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
