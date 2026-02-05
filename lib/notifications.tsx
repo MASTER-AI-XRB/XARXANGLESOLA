@@ -24,6 +24,9 @@ interface NotificationContextType {
   alerts: NavAlert[]
   addAlert: (alert: Omit<NavAlert, 'id' | 'read' | 'createdAt'>) => void
   markAlertRead: (id: string) => void
+  markAllAlertsRead: () => void
+  removeAlert: (id: string) => void
+  removeAllAlerts: () => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
@@ -143,6 +146,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)))
   }, [])
 
+  const markAllAlertsRead = useCallback(() => {
+    setAlerts((prev) => prev.map((a) => ({ ...a, read: true })))
+  }, [])
+
+  const removeAlert = useCallback((id: string) => {
+    setAlerts((prev) => prev.filter((a) => a.id !== id))
+  }, [])
+
+  const removeAllAlerts = useCallback(() => {
+    setAlerts([])
+  }, [])
+
   return (
     <NotificationContext.Provider
       value={{
@@ -155,6 +170,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         alerts,
         addAlert,
         markAlertRead,
+        markAllAlertsRead,
+        removeAlert,
+        removeAllAlerts,
       }}
     >
       {children}

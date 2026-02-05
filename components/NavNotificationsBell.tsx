@@ -15,7 +15,7 @@ export function NavNotificationsBell() {
   const [anchorRect, setAnchorRect] = useState<{ bottom: number; right: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const { alerts, markAlertRead } = useNotifications()
+  const { alerts, markAlertRead, markAllAlertsRead, removeAlert, removeAllAlerts } = useNotifications()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -104,10 +104,38 @@ export function NavNotificationsBell() {
                 : undefined
             }
           >
-            <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0">
+            <div className="px-3 py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 shrink-0 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                 {t('nav.notifications')}
               </h3>
+              <div className="flex items-center gap-0.5">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => markAllAlertsRead()}
+                    className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+title={t('nav.markAllNotificationsRead')}
+                  aria-label={t('nav.markAllNotificationsRead')}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </button>
+                )}
+                {alerts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => removeAllAlerts()}
+                    className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                    title={t('nav.deleteAllNotifications') || 'Eliminar totes'}
+                    aria-label={t('nav.deleteAllNotifications') || 'Eliminar totes'}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="overflow-y-auto flex-1 min-h-0">
               {alerts.length === 0 ? (
@@ -117,11 +145,15 @@ export function NavNotificationsBell() {
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                   {alerts.map((alert) => (
-                    <li key={alert.id}>
+                    <li key={alert.id} className="relative">
                       <button
                         type="button"
                         onClick={() => handleAlertClick(alert.id, alert.action?.url)}
-                        className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                        className={`w-full text-left pl-3 pr-8 py-2.5 transition ${
+                          !alert.read
+                            ? 'bg-gray-100 dark:bg-gray-700/70 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
                       >
                         <p
                           className={`text-sm ${
@@ -139,6 +171,20 @@ export function NavNotificationsBell() {
                         >
                           {alert.message}
                         </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeAlert(alert.id)
+                        }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                        title={t('nav.deleteNotification')}
+                        aria-label={t('nav.deleteNotification')}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </li>
                   ))}

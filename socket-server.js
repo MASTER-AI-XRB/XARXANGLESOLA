@@ -537,6 +537,9 @@ io.on('connection', (socket) => {
           title,
           message,
           action,
+          titleKey,
+          messageKey,
+          params,
           notificationType,
           actorNickname,
           productName,
@@ -556,6 +559,9 @@ io.on('connection', (socket) => {
           productType,
         })
         if (!shouldSend) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[notify] Omès per preferències:', targetUserId)
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ success: true, skipped: true }))
           return
@@ -563,10 +569,18 @@ io.on('connection', (socket) => {
 
         const targetSocketId = userSockets.get(targetUserId)
         if (targetSocketId) {
-          io.to(targetSocketId).emit('app-notification', { type, title, message, action })
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[notify] Enviat via socket per a', targetUserId)
-          }
+          io.to(targetSocketId).emit('app-notification', {
+            type,
+            title,
+            message,
+            action,
+            titleKey,
+            messageKey,
+            params: params || (actorNickname != null || productName != null ? { nickname: actorNickname ?? '', productName: productName ?? '' } : undefined),
+            actorNickname,
+            productName,
+          })
+          console.log('[notify] Enviat via socket:', targetUserId)
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ success: true }))
           return
@@ -609,16 +623,12 @@ io.on('connection', (socket) => {
               })
             })
           )
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[notify] Web Push enviat per a', targetUserId, 'subs:', subs.length)
-          }
+          console.log('[notify] Web Push enviat:', targetUserId, 'subs:', subs.length)
         } else {
           if (!vapidPublic || !vapidPrivate) {
-            console.warn('[notify] VAPID no configurat; no s\'envia push')
+            console.warn('[notify] VAPID no configurat a Railway; no s\'envia push. Afegeix VAPID_PUBLIC_KEY i VAPID_PRIVATE_KEY.')
           } else if (subs.length === 0) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('[notify] Cap subscripció push per a', targetUserId)
-            }
+            console.log('[notify] Cap subscripció push per a', targetUserId, '(usuari ha d\'activar notificacions al navegador)')
           }
         }
 

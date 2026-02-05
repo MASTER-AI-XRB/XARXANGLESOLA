@@ -82,6 +82,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.chat': 'Xat General',
     'nav.notifications': 'Alertes',
     'nav.noNotifications': 'No hi ha alertes noves',
+    'nav.markAllNotificationsRead': 'Marcar totes com a llegides',
+    'nav.deleteAllNotifications': 'Eliminar totes',
+    'nav.deleteNotification': 'Eliminar notificació',
     'nav.hello': 'Hola, {nickname}!',
     'nav.logout': 'Sortir',
     'nav.settings': 'Configuració',
@@ -214,6 +217,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.newPrivateMessage': 'Nou missatge privat',
     'notifications.productReserved': 'Producte reservat',
     'notifications.productReservedMessage': '{nickname} ha reservat el teu producte: {productName}',
+    'notifications.productReservedFromFavoritesMessage': '{nickname} ha reservat un producte dels teus preferits: {productName}',
+    'notifications.viewProduct': 'Veure producte',
+    'notifications.goToProducts': 'Anar a productes',
     'notifications.productUnreserved': 'Producte desreservat',
     'notifications.productUnreservedMessage': '{nickname} ha desreservat el teu producte: {productName}',
     'notifications.productUnreservedFromFavorites': 'Producte desreservat',
@@ -222,6 +228,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.productDeletedFromFavoritesMessage': '{nickname} ha eliminat un producte dels teus preferits: {productName}',
     'notifications.productAddedToFavorites': 'Producte afegit als preferits',
     'notifications.productAddedToFavoritesMessage': '{nickname} ha afegit el teu producte als preferits: {productName}',
+    'notifications.loanStarted': 'Prèstec iniciat',
+    'notifications.loanStartedMessage': 'Comença el prèstec de {productName}',
+    'notifications.loanEnded': 'Prèstec acabat',
+    'notifications.loanEndedMessage': "S'ha acabat el prèstec de {productName}",
     'notifications.sessionTerminated': 'Sessió tancada',
     'notifications.sessionTerminatedMessage': 'Una nova sessió s\'ha obert des d\'un altre dispositiu.',
     'notifications.view': 'Veure',
@@ -369,6 +379,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.chat': 'Chat General',
     'nav.notifications': 'Alertas',
     'nav.noNotifications': 'No hay alertas nuevas',
+    'nav.markAllNotificationsRead': 'Marcar todas como leídas',
+    'nav.deleteAllNotifications': 'Eliminar todas',
+    'nav.deleteNotification': 'Eliminar notificación',
     'nav.hello': '¡Hola, {nickname}!',
     'nav.logout': 'Salir',
     'nav.settings': 'Configuración',
@@ -497,6 +510,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.newPrivateMessage': 'Nuevo mensaje privado',
     'notifications.productReserved': 'Producto reservado',
     'notifications.productReservedMessage': '{nickname} ha reservado tu producto: {productName}',
+    'notifications.productReservedFromFavoritesMessage': '{nickname} ha reservado un producto de tus favoritos: {productName}',
     'notifications.productUnreserved': 'Producto desreservado',
     'notifications.productUnreservedMessage': '{nickname} ha desreservado tu producto: {productName}',
     'notifications.productUnreservedFromFavorites': 'Producto desreservado',
@@ -505,6 +519,12 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.productDeletedFromFavoritesMessage': '{nickname} ha eliminado un producto de tus favoritos: {productName}',
     'notifications.productAddedToFavorites': 'Producto añadido a favoritos',
     'notifications.productAddedToFavoritesMessage': '{nickname} ha añadido tu producto a favoritos: {productName}',
+    'notifications.loanStarted': 'Préstamo iniciado',
+    'notifications.loanStartedMessage': 'Comienza el préstamo de {productName}',
+    'notifications.loanEnded': 'Préstamo terminado',
+    'notifications.loanEndedMessage': 'Se ha acabado el préstamo de {productName}',
+    'notifications.viewProduct': 'Ver producto',
+    'notifications.goToProducts': 'Ir a productos',
     'notifications.sessionTerminated': 'Sesión cerrada',
     'notifications.sessionTerminatedMessage': 'Se ha abierto una nueva sesión desde otro dispositivo.',
     'notifications.view': 'Ver',
@@ -595,6 +615,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.chat': 'General Chat',
     'nav.notifications': 'Alerts',
     'nav.noNotifications': 'No new alerts',
+    'nav.markAllNotificationsRead': 'Mark all as read',
+    'nav.deleteAllNotifications': 'Delete all',
+    'nav.deleteNotification': 'Delete notification',
     'nav.hello': 'Hello, {nickname}!',
     'nav.logout': 'Logout',
     'nav.settings': 'Settings',
@@ -727,6 +750,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.newPrivateMessage': 'New private message',
     'notifications.productReserved': 'Product reserved',
     'notifications.productReservedMessage': '{nickname} reserved your product: {productName}',
+    'notifications.productReservedFromFavoritesMessage': '{nickname} reserved a product in your favourites: {productName}',
+    'notifications.viewProduct': 'View product',
+    'notifications.goToProducts': 'Go to products',
     'notifications.productUnreserved': 'Product unreserved',
     'notifications.productUnreservedMessage': '{nickname} unreserved your product: {productName}',
     'notifications.productUnreservedFromFavorites': 'Product unreserved',
@@ -735,6 +761,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.productDeletedFromFavoritesMessage': '{nickname} deleted a product in your favorites: {productName}',
     'notifications.productAddedToFavorites': 'Product added to favorites',
     'notifications.productAddedToFavoritesMessage': '{nickname} added your product to favorites: {productName}',
+    'notifications.loanStarted': 'Loan started',
+    'notifications.loanStartedMessage': 'Loan of {productName} has started',
+    'notifications.loanEnded': 'Loan ended',
+    'notifications.loanEndedMessage': 'Loan of {productName} has ended',
     'notifications.sessionTerminated': 'Session ended',
     'notifications.sessionTerminatedMessage': 'A new session was opened from another device.',
     'notifications.view': 'View',
@@ -817,12 +847,12 @@ const translations: Record<Locale, Record<string, string>> = {
   },
 }
 
-const formatTranslation = (
+export const formatTranslation = (
   locale: Locale,
   key: string,
   params?: Record<string, string | number>
 ): string => {
-  const translation = translations[locale][key] || key
+  const translation = translations[locale]?.[key] ?? key
   if (!params) {
     return translation
   }
@@ -832,7 +862,15 @@ const formatTranslation = (
   )
 }
 
+/** Locale actual des de localStorage (per notificacions que es reben fora del cicle de render). */
+export function getLocaleNow(): Locale {
+  if (typeof window === 'undefined') return 'ca'
+  const saved = localStorage.getItem('locale') as Locale
+  return saved === 'ca' || saved === 'es' || saved === 'en' ? saved : 'ca'
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
+  // Sempre començar amb 'ca' per evitar mismatch d'hidratació (servidor no té localStorage)
   const [locale, setLocaleState] = useState<Locale>('ca')
 
   useEffect(() => {

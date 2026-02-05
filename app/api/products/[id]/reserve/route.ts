@@ -1,26 +1,15 @@
 import { NextRequest } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getAuthUserId } from '@/lib/auth'
 import { validateUuid } from '@/lib/validation'
 import { apiError, apiOk } from '@/lib/api-response'
-import { logError, logWarn } from '@/lib/logger'
-
-function getPrisma() {
-  try {
-    return new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    })
-  } catch (error) {
-    logError('Error creant PrismaClient:', error)
-    throw error
-  }
-}
+import { logError, logInfo, logWarn } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
+import { getSocketServerUrl } from '@/lib/socket'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const prisma = getPrisma()
   try {
     const resolvedParams = params instanceof Promise ? await params : params
     const idValidation = validateUuid(resolvedParams.id, 'producte')
@@ -60,7 +49,7 @@ export async function PATCH(
       })
 
       const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
-      const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim().replace(/\/$/, '')
+      const socketUrl = getSocketServerUrl()
       const actor = await prisma.user.findUnique({
         where: { id: authUserId },
         select: { nickname: true },
@@ -68,42 +57,44 @@ export async function PATCH(
       const reservedBy = actor ? { nickname: actor.nickname } : null
 
       if (socketUrl && notifySecret) {
-        fetch(`${socketUrl}/broadcast-product-state`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-notify-token': notifySecret,
-          },
-          body: JSON.stringify({
-            productId: resolvedParams.id,
-            reserved: true,
-            reservedBy,
-          }),
-        })
-          .then(async (r) => {
-            if (!r.ok) {
-              logWarn('Broadcast product-state (reserve) fallit:', { status: r.status, body: await r.text().catch(() => '') })
-            }
+        try {
+          const broadcastRes = await fetch(`${socketUrl}/broadcast-product-state`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-notify-token': notifySecret,
+            },
+            body: JSON.stringify({
+              productId: resolvedParams.id,
+              reserved: true,
+              reservedBy,
+            }),
           })
-          .catch((err) => {
-            logWarn('Broadcast product-state (reserve) error:', err)
-          })
+          if (!broadcastRes.ok) {
+            logWarn('Broadcast product-state (reserve) fallit:', { status: broadcastRes.status, body: await broadcastRes.text().catch(() => '') })
+          }
+        } catch (err) {
+          logWarn('Broadcast product-state (reserve) error:', err)
+        }
       }
 
       if (notifySecret && socketUrl && product.name) {
         const actorNickname = actor?.nickname ?? 'Algú'
         const productName = product.name
         const productId = resolvedParams.id
-        prisma.favorite
-          .findMany({
+        try {
+          const favorites = await prisma.favorite.findMany({
             where: {
               productId: resolvedParams.id,
               userId: { not: authUserId },
             },
             select: { userId: true },
           })
-          .then((favorites) =>
-            Promise.all(
+          if (favorites.length === 0) {
+            logInfo('Notificacions reserva: cap usuari amb el producte als preferits (excepte qui reserva); no s\'envia cap notificació.')
+          } else {
+            logInfo('Notificacions reserva: enviant a', favorites.length, 'usuari(s) amb el producte als preferits.')
+            await Promise.all(
               favorites.map((fav) =>
                 fetch(`${socketUrl}/notify`, {
                   method: 'POST',
@@ -114,30 +105,47 @@ export async function PATCH(
                   body: JSON.stringify({
                     targetUserId: fav.userId,
                     type: 'info',
+                    titleKey: 'notifications.productReserved',
+                    messageKey: 'notifications.productReservedFromFavoritesMessage',
+                    params: { nickname: actorNickname, productName },
                     title: 'Producte reservat',
                     message: `${actorNickname} ha reservat un producte dels teus preferits: ${productName}`,
                     notificationType: 'reserved_favorite',
                     actorNickname,
                     productName,
-                    action: { label: 'Veure producte', url: `/app/products/${productId}` },
+                    action: { labelKey: 'notifications.viewProduct', label: 'Veure producte', url: `/app/products/${productId}` },
                   }),
+                }).then(async (r) => {
+                  if (r.ok || r.status === 404) return
+                  const body = await r.text().catch(() => '')
+                  const msg = r.status === 401
+                    ? 'Revisa que AUTH_SECRET (o NOTIFY_SECRET) sigui el mateix a Vercel i Railway.'
+                    : (() => {
+                        try {
+                          const d = JSON.parse(body) as { error?: string }
+                          return (d?.error ?? body) || String(r.status)
+                        } catch {
+                          return body || String(r.status)
+                        }
+                      })()
+                  logWarn('Notify reserva-preferits fallit:', { status: r.status, targetUserId: fav.userId, detail: msg })
+                }).catch((err) => {
+                  logWarn('Notify reserva-preferits error xarxa:', { targetUserId: fav.userId, error: String(err?.message || err) })
                 })
-                  .then(async (r) => {
-                    if (r.ok || r.status === 404) return
-                    const d = await r.json().catch(() => ({}))
-                    logWarn('Notify reserva-preferits:', (d as { error?: string })?.error ?? r.status)
-                  })
-                  .catch(() => {})
               )
             )
-          )
-          .catch((e) => {
-            if (process.env.NODE_ENV === 'production') {
-              logError('Error enviant notificacions reserva-preferits:', e)
-            } else {
-              logWarn('No s\'han pogut enviar notificacions reserva-preferits.', e)
-            }
-          })
+          }
+        } catch (e) {
+          if (process.env.NODE_ENV === 'production') {
+            logError('Error enviant notificacions reserva-preferits:', e)
+          } else {
+            logWarn('No s\'han pogut enviar notificacions reserva-preferits.', e)
+          }
+        }
+      } else if (product.name && (!socketUrl || !notifySecret)) {
+        logWarn('Notificacions reserva-preferits no enviades: cal NEXT_PUBLIC_SOCKET_URL i AUTH_SECRET (o NOTIFY_SECRET) a Vercel.')
+        if (!socketUrl) logWarn('  → NEXT_PUBLIC_SOCKET_URL absent o buida.')
+        if (!notifySecret) logWarn('  → AUTH_SECRET (i NOTIFY_SECRET) absents.')
       }
 
       return apiOk({ reserved: updated.reserved })
@@ -155,7 +163,7 @@ export async function PATCH(
     })
 
     const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
-    const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim().replace(/\/$/, '')
+    const socketUrl = getSocketServerUrl()
 
     if (socketUrl && notifySecret) {
       fetch(`${socketUrl}/broadcast-product-state`, {
@@ -208,20 +216,35 @@ export async function PATCH(
                     body: JSON.stringify({
                       targetUserId: fav.userId,
                       type: 'info',
+                      titleKey: 'notifications.productUnreservedFromFavorites',
+                      messageKey: 'notifications.productUnreservedFromFavoritesMessage',
+                      params: { nickname, productName: product.name },
                       title: 'Producte desreservat',
                       message: `${nickname} ha desreservat un producte dels teus preferits: ${product.name}`,
                       notificationType: 'unreserved_favorite',
                       actorNickname: nickname,
                       productName: product.name,
-                      action: { label: 'Veure producte', url: `/app/products/${resolvedParams.id}` },
+                      action: { labelKey: 'notifications.viewProduct', label: 'Veure producte', url: `/app/products/${resolvedParams.id}` },
                     }),
                   })
                     .then(async (r) => {
                       if (r.ok || r.status === 404) return
-                      const d = await r.json().catch(() => ({}))
-                      logWarn('Notify desreserva-preferits:', (d as { error?: string })?.error ?? r.status)
+                      const body = await r.text().catch(() => '')
+                      const msg = r.status === 401
+                        ? 'Revisa AUTH_SECRET/NOTIFY_SECRET (mateix a Vercel i Railway).'
+                        : (() => {
+                            try {
+                              const d = JSON.parse(body) as { error?: string }
+                              return (d?.error ?? body) || String(r.status)
+                            } catch {
+                              return body || String(r.status)
+                            }
+                          })()
+                      logWarn('Notify desreserva-preferits fallit:', { status: r.status, targetUserId: fav.userId, detail: msg })
                     })
-                    .catch(() => {})
+                    .catch((err) => {
+                      logWarn('Notify desreserva-preferits error xarxa:', { targetUserId: fav.userId, error: String(err?.message || err) })
+                    })
                 )
               )
             )
@@ -239,7 +262,5 @@ export async function PATCH(
   } catch (error) {
     logError('Error actualitzant reserva:', error)
     return apiError('Error actualitzant reserva', 500)
-  } finally {
-    await prisma.$disconnect()
   }
 }

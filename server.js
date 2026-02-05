@@ -101,6 +101,8 @@ app.prepare().then(() => {
     return null
   }
 
+  const notifySecret = process.env.NOTIFY_SECRET || getSecret()
+
   const base64UrlDecode = (value) => {
     const padded = value.replace(/-/g, '+').replace(/_/g, '/')
     const padLength = (4 - (padded.length % 4)) % 4
@@ -366,6 +368,9 @@ app.prepare().then(() => {
         title,
         message,
         action,
+        titleKey,
+        messageKey,
+        params,
         notificationType,
         actorNickname,
         productName,
@@ -403,6 +408,11 @@ app.prepare().then(() => {
           title,
           message,
           action,
+          titleKey,
+          messageKey,
+          params: params || (actorNickname != null || productName != null ? { nickname: actorNickname ?? '', productName: productName ?? '' } : undefined),
+          actorNickname,
+          productName,
         })
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ success: true }))

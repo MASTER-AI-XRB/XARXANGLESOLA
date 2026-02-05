@@ -102,6 +102,18 @@ Si has canviat variables d'entorn:
    - Commit i push
    - Vercel farà deploy automàtic
 
+### Error: "Error in PostgreSQL connection: Error { kind: Closed, cause: None }" (en local amb `npm run dev`)
+
+**Causa**: La connexió amb la base de dades (PostgreSQL, p. ex. Neon) s’ha tancat (per inactivitat, reinici del servidor, o massa clients oberts).
+
+**Què fer**:
+
+1. **Un sol client Prisma**: El projecte ha d’usar el client compartit de `lib/prisma.ts` a les API routes, no crear `new PrismaClient()` a cada petició. Si alguna ruta crea un client propi i fa `$disconnect()`, pot provocar problemes; ja s’ha canviat la ruta de reserva per usar el singleton.
+2. **Neon**: Si la BD és a Neon, usa la **connection string amb pooler** (a la consola de Neon surt “Pooled connection” o similar). Això redueix errors de connexió tancada.
+3. **En local**: Reinicia `npm run dev`; a vegades el Hot Reload deixa connexions antigues i reapareix l’error fins que reinicies.
+
+Si l’error surt de tant en tant i l’app respon bé, pot ser només un log de Prisma quan la BD tanca una connexió idle; no cal fer res més si tot funciona.
+
 ## 📞 Quan Demanar Ajuda
 
 Si segueixes amb problemes, prepara aquesta informació:

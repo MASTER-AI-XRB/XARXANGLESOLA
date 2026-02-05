@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
     if (product.userId !== authUserId && notificationsEnabled) {
       try {
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL
+        const socketUrl = getSocketServerUrl()
         if (!socketUrl || !notifySecret) {
           return apiOk({ isFavorite: true })
         }
@@ -139,12 +139,16 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             targetUserId: product.userId,
             type: 'info',
+            titleKey: 'notifications.productAddedToFavorites',
+            messageKey: 'notifications.productAddedToFavoritesMessage',
+            params: { nickname: user?.nickname || 'Algú', productName: product.name },
             title: 'Producte afegit als preferits',
             message: `${user?.nickname || 'Algú'} ha afegit el teu producte als preferits: ${product.name}`,
             notificationType: 'favorite',
             actorNickname: user?.nickname || '',
             productName: product.name,
             action: {
+              labelKey: 'notifications.viewProduct',
               label: 'Veure producte',
               url: `/app/products/${productId}`,
             },

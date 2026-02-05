@@ -1,3 +1,17 @@
+/**
+ * URL del servidor Socket per crides des del servidor (API routes).
+ * En dev retorna localhost:3001 perquè els clients connecten al socket local.
+ * En producció retorna NEXT_PUBLIC_SOCKET_URL (p. ex. Railway).
+ */
+export function getSocketServerUrl(): string {
+  if (process.env.NODE_ENV === 'development') {
+    const port = process.env.SOCKET_PORT || '3001'
+    return `http://127.0.0.1:${port}`
+  }
+  const url = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim().replace(/\/$/, '')
+  return url.startsWith('http://') || url.startsWith('https://') ? url : url ? `https://${url}` : ''
+}
+
 export function getSocketUrl(): string | null {
   const rawEnvUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
   const isBrowser = typeof window !== 'undefined'

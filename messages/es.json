@@ -56,6 +56,9 @@
     "chat": "Chat General",
     "notifications": "Alertas",
     "noNotifications": "No hay alertas nuevas",
+    "markAllNotificationsRead": "Marcar todas como leídas",
+    "deleteAllNotifications": "Eliminar todas",
+    "deleteNotification": "Eliminar notificación",
     "hello": "¡Hola, {nickname}!",
     "logout": "Salir"
   },

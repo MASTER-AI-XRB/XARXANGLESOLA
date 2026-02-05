@@ -12,6 +12,7 @@ import {
 } from '@/lib/validation'
 import { apiError, apiOk } from '@/lib/api-response'
 import { logError, logWarn } from '@/lib/logger'
+import { getSocketServerUrl } from '@/lib/socket'
 
 export async function GET(
   request: NextRequest,
@@ -76,7 +77,7 @@ export async function DELETE(
       process.env.NODE_ENV === 'production' ||
       process.env.ENABLE_DEV_NOTIFICATIONS === 'true'
     const notifySecret = process.env.NOTIFY_SECRET || process.env.AUTH_SECRET
-    const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim()
+    const socketUrl = getSocketServerUrl()
     let favorites: { userId: string }[] = []
     let ownerNickname: string | null = null
 
@@ -105,10 +106,6 @@ export async function DELETE(
     if (notificationsEnabled && notifySecret && socketUrl && product.name && favorites.length > 0) {
       try {
         const nickname = ownerNickname ?? 'El propietari'
-        const title = 'Producte eliminat'
-        const message = `${nickname} ha eliminat un producte dels teus preferits: ${product.name}`
-        const action = { label: 'Anar a productes', url: '/app' }
-
         await Promise.all(
           favorites.map((fav) =>
             fetch(`${socketUrl.replace(/\/$/, '')}/notify`, {
@@ -120,12 +117,15 @@ export async function DELETE(
               body: JSON.stringify({
                 targetUserId: fav.userId,
                 type: 'info',
-                title,
-                message,
+                titleKey: 'notifications.productDeletedFromFavorites',
+                messageKey: 'notifications.productDeletedFromFavoritesMessage',
+                params: { nickname, productName: product.name },
+                title: 'Producte eliminat',
+                message: `${nickname} ha eliminat un producte dels teus preferits: ${product.name}`,
                 notificationType: 'deleted_favorite',
                 actorNickname: nickname,
                 productName: product.name,
-                action,
+                action: { labelKey: 'notifications.goToProducts', label: 'Anar a productes', url: '/app' },
               }),
             })
               .then(async (r) => {

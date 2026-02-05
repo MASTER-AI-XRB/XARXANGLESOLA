@@ -56,6 +56,9 @@
     "chat": "General Chat",
     "notifications": "Alerts",
     "noNotifications": "No new alerts",
+    "markAllNotificationsRead": "Mark all as read",
+    "deleteAllNotifications": "Delete all",
+    "deleteNotification": "Delete notification",
     "hello": "Hello, {nickname}!",
     "logout": "Logout"
   },

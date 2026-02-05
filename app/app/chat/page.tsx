@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -9,8 +9,9 @@ import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
 import { getSocketUrl } from '@/lib/socket'
-import { getStoredNickname, getStoredSocketToken } from '@/lib/client-session'
+import { getStoredNickname } from '@/lib/client-session'
 import { logError, logInfo, logWarn } from '@/lib/client-logger'
+import { useAppSocket } from '@/components/AppSocketProvider'
 
 interface Message {
   id: string
@@ -29,10 +30,9 @@ interface ProductSummary {
 }
 
 export default function ChatPage() {
+  const { socket, connected } = useAppSocket()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [connected, setConnected] = useState(false)
   const [privateChats, setPrivateChats] = useState<{ [key: string]: Message[] }>({})
   const [activePrivateChat, setActivePrivateChat] = useState<string | null>(null)
   const [activePrivateTab, setActivePrivateTab] = useState<string | null>(null)
@@ -50,6 +50,7 @@ export default function ChatPage() {
   const [hasRestoredChats, setHasRestoredChats] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const activePrivateProductIdRef = useRef<string | null>(null)
+  const activePrivateChatRef = useRef<string | null>(null)
   const productIdFromUrlRef = useRef<string | null>(null)
   const confettiFiredForProductRef = useRef<string | null>(null)
   const refetchForProductUrlDoneRef = useRef<string | null>(null)
@@ -73,6 +74,10 @@ export default function ChatPage() {
   useEffect(() => {
     activePrivateProductIdRef.current = resolveActiveProductId(activePrivateTab)
   }, [activePrivateTab])
+
+  useEffect(() => {
+    activePrivateChatRef.current = activePrivateChat
+  }, [activePrivateChat])
 
   useEffect(() => {
     privateChatProductsRef.current = privateChatProducts
@@ -524,301 +529,165 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Diagnòstic de connexió (sense crear socket; el socket ve del context)
   useEffect(() => {
     if (!nickname) return
-
     const socketUrl = getSocketUrl()
-
-    // Si no hi ha URL configurada i estem a producció, desactivar Socket.io
     if (!socketUrl) {
       logWarn('⚠️ Socket.io desactivat a producció. Configura NEXT_PUBLIC_SOCKET_URL per activar el xat.')
       logWarn('   Configura a Vercel: NEXT_PUBLIC_SOCKET_URL=https://xarxanglesola-production.up.railway.app')
-      setConnected(false)
       return
     }
-    
     logInfo('  → URL final del socket:', socketUrl)
-    
     logInfo('=== DIAGNÒSTIC DE CONNEXIÓ SOCKET.IO ===')
     logInfo('URL del socket:', socketUrl)
     logInfo('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
     logInfo('Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
-    logInfo('Protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
-    logInfo('Port:', typeof window !== 'undefined' ? window.location.port : 'N/A')
-    logInfo('User Agent:', typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A')
-    logInfo('URL completa:', typeof window !== 'undefined' ? window.location.href : 'N/A')
     logInfo('========================================')
-    
-    // Provar la connexió manualment abans de Socket.io (només en desenvolupament)
     if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
       const testUrl = `${socketUrl}/socket.io/?EIO=4&transport=polling`
       logInfo('🔍 Provant connexió HTTP a:', testUrl)
-      
-      fetch(testUrl, {
-        method: 'GET',
-        mode: 'cors',
-      })
-        .then(response => {
-          logInfo('✅ Test de connexió HTTP exitós:', {
-            status: response.status,
-            statusText: response.statusText,
-          })
-          logInfo('Headers:', Object.fromEntries(response.headers.entries()))
-        })
-        .catch(error => {
-          logError('❌ Test de connexió HTTP fallat:', error)
-          logError('Error details:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-          })
-          logError('URL intentada:', testUrl)
-        })
+      fetch(testUrl, { method: 'GET', mode: 'cors' })
+        .then((r) => logInfo('✅ Test de connexió HTTP exitós:', { status: r.status }))
+        .catch((err) => logError('❌ Test de connexió HTTP fallat:', err))
     }
-    
-    const socketToken = getStoredSocketToken()
-    if (!socketToken) {
-      logWarn('⚠️ Socket auth token absent. Torna a iniciar sessió.')
-      setConnected(false)
-      return
+  }, [nickname])
+
+  // Listeners de xat sobre el socket del context (no es tanca el socket en neteja)
+  useEffect(() => {
+    const s = socket
+    if (!nickname || !s) return
+
+    const onConnect = () => {
+      logInfo('Connectat a Socket.io (xat)')
+      s.emit('join-general')
     }
-    const newSocket = io(socketUrl, {
-      auth: { token: socketToken },
-      transports: ['polling', 'websocket'], // Polling primer per millor compatibilitat
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      forceNew: false,
-      upgrade: true,
-      rememberUpgrade: true,
-      autoConnect: true,
-    })
-
-    newSocket.on('connect', () => {
-      logInfo('Connectat a Socket.io')
-      setConnected(true)
-      newSocket.emit('join-general')
-    })
-
-    newSocket.on('connect_error', (error: any) => {
-      logError('❌ Error de connexió Socket.io:', error)
-      logError('Detalls de l\'error:', {
-        message: error.message,
-        type: error.type,
-        description: error.description,
-        transport: error.transport,
-        context: error.context
-      })
-      logError('URL intentada:', socketUrl)
-      logError('Origin actual:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
-      
-      // Missatges d'ajuda específics segons l'error
-      let causaProbable = 'Error desconegut - Revisa els logs del servidor'
-      let solucions: string[] = []
-      
-      if (error.description === 404 || error.message?.includes('404')) {
-        causaProbable = '404 Not Found - El servidor Socket.io no està disponible a aquesta URL'
-        solucions = [
-          '1. Verifica que el servidor Socket.io estigui engegat a Railway',
-          '2. Verifica que NEXT_PUBLIC_SOCKET_URL sigui correcta (ha de ser la URL completa sense port)',
-          '3. Verifica que Railway permeti connexions al servidor Socket.io',
-          '4. Comprova els logs del servidor a Railway per veure errors'
-        ]
-      } else if (error.message?.includes('CORS')) {
-        causaProbable = 'CORS - El servidor no permet connexions des d\'aquest origen'
-        solucions = [
-          '1. Configura NEXT_PUBLIC_ALLOWED_ORIGINS a Railway amb: https://xarxanglesola.vercel.app',
-          '2. Verifica que el servidor Socket.io a Railway tingui CORS configurat correctament'
-        ]
-      } else if (error.message?.includes('timeout')) {
-        causaProbable = 'Timeout - El servidor no respon'
-        solucions = [
-          '1. Verifica que el servidor Socket.io estigui actiu a Railway',
-          '2. Verifica la connexió de xarxa',
-          '3. Comprova els logs del servidor a Railway'
-        ]
-      } else if (error.message?.includes('ECONNREFUSED')) {
-        causaProbable = 'Connexió refusada - El servidor no està disponible'
-        solucions = [
-          '1. Verifica que NEXT_PUBLIC_SOCKET_URL sigui correcta',
-          '2. Verifica que el servidor Socket.io estigui engegat a Railway',
-          '3. Verifica que Railway permeti connexions externes'
-        ]
+    const onConnectError = (error: { message?: string; description?: number; type?: string }) => {
+      logError('❌ Error de connexió Socket.io:', error?.message)
+      if (error?.description === 404 || error?.message?.includes('404')) {
+        logError('Causa probable: 404 - El servidor Socket.io no està disponible a aquesta URL')
       }
-      
-      logError('Causa probable:', causaProbable)
-      if (solucions.length > 0) {
-        logError('Solucions suggerides:')
-        solucions.forEach(sol => logError('  ' + sol))
-      }
-      
-      setConnected(false)
-    })
-
-    newSocket.on('reconnect_attempt', (attemptNumber: number) => {
+    }
+    const onReconnectAttempt = (attemptNumber: number) => {
       logInfo(`🔄 Intentant reconnexió (intent ${attemptNumber}/10)...`)
-    })
-
-    newSocket.on('reconnect', (attemptNumber: number) => {
-      logInfo(`✅ Reconnexió exitosa després de ${attemptNumber} intents`)
-      setConnected(true)
-      if (!activePrivateChat) {
-        newSocket.emit('join-general')
+    }
+    const onReconnect = () => {
+      logInfo('✅ Reconnexió exitosa')
+      if (!activePrivateChatRef.current) {
+        s.emit('join-general')
+      } else {
+        s.emit('join-private', {
+          targetNickname: activePrivateChatRef.current,
+          productId: activePrivateProductIdRef.current,
+        })
       }
-    })
-
-    newSocket.on('reconnect_error', (error: any) => {
-      logError('❌ Error en reconnexió:', error)
-    })
-
-    newSocket.on('reconnect_failed', () => {
-      logError('❌ Fallida la reconnexió després de tots els intents')
-      logError('Verifica:')
-      logError('  1. NEXT_PUBLIC_SOCKET_URL està ben configurada a Vercel?')
-      logError('  2. NEXT_PUBLIC_ALLOWED_ORIGINS inclou la URL de Vercel a Railway?')
-      logError('  3. El servidor Socket.IO a Railway està actiu?')
-      logError('  4. La URL usa HTTPS si Railway ho requereix?')
-      setConnected(false)
-    })
-
-    newSocket.on('disconnect', () => {
-      logInfo('Desconnectat de Socket.io')
-      setConnected(false)
-    })
-
-    newSocket.on('session-terminated', (data: { message?: string }) => {
-      logInfo('Sessió terminada:', data.message)
+    }
+    const onReconnectError = (error: unknown) => logError('❌ Error en reconnexió:', error)
+    const onReconnectFailed = () => {
+      logError('❌ Fallida la reconnexió. Verifica NEXT_PUBLIC_SOCKET_URL i NEXT_PUBLIC_ALLOWED_ORIGINS.')
+    }
+    const onDisconnect = () => logInfo('Desconnectat de Socket.io')
+    const onSessionTerminated = (data: { message?: string }) => {
+      logInfo('Sessió terminada:', data?.message)
       showInfo(
         t('notifications.sessionTerminated') || 'Sessió tancada',
-        data.message || t('notifications.sessionTerminatedMessage') || 'Una nova sessió s\'ha obert des d\'un altre dispositiu.',
+        data?.message ?? (t('notifications.sessionTerminatedMessage') || 'Una nova sessió s\'ha obert des d\'un altre dispositiu.'),
         {
-          duration: 0, // No tancar automàticament
+          duration: 0,
           action: {
             label: t('common.close') || 'Tancar',
             onClick: () => {
               if (typeof window !== 'undefined') {
                 localStorage.removeItem('nickname')
-                  localStorage.removeItem('socketToken')
+                localStorage.removeItem('socketToken')
                 window.location.href = '/'
               }
-            }
-          }
+            },
+          },
         }
       )
-    })
-
-    newSocket.on('general-message', (message: Message) => {
+    }
+    const onGeneralMessage = (message: Message) => {
       setMessages((prev) => [...prev, message])
-      // Notificació només si no estàs a la pàgina de xat o no estàs al xat general
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/chat')) {
         showInfo(
           t('notifications.newMessage') || 'Nou missatge',
           `${message.userNickname}: ${message.content}`,
-          {
-            action: {
-              label: t('notifications.view') || 'Veure',
-              onClick: () => router.push('/app/chat')
-            }
-          }
+          { action: { label: t('notifications.view') || 'Veure', onClick: () => router.push('/app/chat') } }
         )
       }
-    })
-
-    newSocket.on('private-message', (message: Message) => {
-      const otherUserNickname = message.userNickname === nickname 
-        ? activePrivateChat 
-        : message.userNickname
+    }
+    const onPrivateMessage = (message: Message) => {
+      const otherUserNickname = message.userNickname === nickname ? activePrivateChatRef.current : message.userNickname
       const messageProductId = message.productId ?? activePrivateProductIdRef.current ?? null
-      
-      if (otherUserNickname) {
-        const chatKey = buildPrivateChatKey(otherUserNickname, messageProductId)
-        setOpenPrivateChats((prev) => {
-          if (!prev.includes(otherUserNickname)) {
-            return [...prev, otherUserNickname]
-          }
-          return prev
-        })
-        
-        setPrivateChats((prev) => ({
-          ...prev,
-          [chatKey]: [...(prev[chatKey] || []), message],
-        }))
-        if (
-          activePrivateChat === otherUserNickname &&
-          activePrivateProductIdRef.current === messageProductId
-        ) {
-          scrollToBottom()
-        } else {
-          setUnreadPrivateChats((prev) => ({
-            ...prev,
-            [chatKey]: (prev[chatKey] || 0) + 1,
-          }))
-          // Notificació si no estàs al xat privat actiu o no estàs a la pàgina de xat
-          if (typeof window !== 'undefined' && 
-              (!window.location.pathname.includes('/chat') || activePrivateChat !== otherUserNickname)) {
-            showInfo(
-              t('notifications.newPrivateMessage') || 'Nou missatge privat',
-              `${message.userNickname}: ${message.content}`,
-              {
-                action: {
-                  label: t('notifications.view') || 'Veure',
-                  onClick: () => router.push(`/app/chat?nickname=${otherUserNickname}`)
-                }
-              }
-            )
-          }
+      if (!otherUserNickname) return
+      const chatKey = buildPrivateChatKey(otherUserNickname, messageProductId)
+      setOpenPrivateChats((prev) => (prev.includes(otherUserNickname) ? prev : [...prev, otherUserNickname]))
+      setPrivateChats((prev) => ({ ...prev, [chatKey]: [...(prev[chatKey] || []), message] }))
+      if (activePrivateChatRef.current === otherUserNickname && activePrivateProductIdRef.current === messageProductId) {
+        scrollToBottom()
+      } else {
+        setUnreadPrivateChats((prev) => ({ ...prev, [chatKey]: (prev[chatKey] || 0) + 1 }))
+        if (typeof window !== 'undefined' && (!window.location.pathname.includes('/chat') || activePrivateChatRef.current !== otherUserNickname)) {
+          showInfo(
+            t('notifications.newPrivateMessage') || 'Nou missatge privat',
+            `${message.userNickname}: ${message.content}`,
+            { action: { label: t('notifications.view') || 'Veure', onClick: () => router.push(`/app/chat?nickname=${otherUserNickname}`) } }
+          )
         }
       }
-    })
+    }
+    const onOnlineUsers = (users: string[]) => setOnlineUsers(users)
+    const onLoadMessages = (loadedMessages: Message[]) => setMessages(loadedMessages)
+    const onLoadPrivateMessages = (data: { messages: Message[]; productId?: string | null }) => {
+      const active = activePrivateChatRef.current
+      if (!active) return
+      const productIdFromData = data.productId ?? activePrivateProductIdRef.current ?? null
+      const chatKey = buildPrivateChatKey(active, productIdFromData)
+      setOpenPrivateChats((prev) => (prev.includes(active) ? prev : [...prev, active]))
+      setPrivateChats((prev) => ({ ...prev, [chatKey]: data.messages }))
+    }
 
-    newSocket.on('online-users', (users: string[]) => {
-      setOnlineUsers(users)
-    })
+    s.on('connect', onConnect)
+    s.on('connect_error', onConnectError)
+    s.on('reconnect_attempt', onReconnectAttempt)
+    s.on('reconnect', onReconnect)
+    s.on('reconnect_error', onReconnectError)
+    s.on('reconnect_failed', onReconnectFailed)
+    s.on('disconnect', onDisconnect)
+    s.on('session-terminated', onSessionTerminated)
+    s.on('general-message', onGeneralMessage)
+    s.on('private-message', onPrivateMessage)
+    s.on('online-users', onOnlineUsers)
+    s.on('load-messages', onLoadMessages)
+    s.on('load-private-messages', onLoadPrivateMessages)
 
-    // Escoltar notificacions de l'aplicació
-    newSocket.on('app-notification', (data: { type: string; title: string; message: string; action?: { label: string; onClick: () => void } }) => {
-      showInfo(data.title, data.message, {
-        type: data.type as 'info' | 'success' | 'warning' | 'error',
-        action: data.action,
-      })
-    })
-
-    newSocket.on('load-messages', (loadedMessages: Message[]) => {
-      setMessages(loadedMessages)
-    })
-
-    newSocket.on('load-private-messages', (data: { messages: Message[]; productId?: string | null }) => {
-      if (activePrivateChat) {
-        const productIdFromData = data.productId ?? activePrivateProductIdRef.current ?? null
-        const chatKey = buildPrivateChatKey(activePrivateChat, productIdFromData)
-        setOpenPrivateChats((prev) => {
-          if (!prev.includes(activePrivateChat)) {
-            return [...prev, activePrivateChat]
-          }
-          return prev
-        })
-        
-        setPrivateChats((prev) => ({
-          ...prev,
-          [chatKey]: data.messages,
-        }))
-      }
-    })
-
-    setSocket(newSocket)
+    if (s.connected) {
+      s.emit('join-general')
+    }
 
     const targetNickname = searchParams.get('nickname')
     const targetProductId = searchParams.get('productId')
-    if (targetNickname && targetProductId && nickname && nickname !== targetNickname) {
+    if (targetNickname && targetProductId && nickname !== targetNickname) {
       fetch(`/api/products/${targetProductId}/reserve-on-dm-open`, { method: 'POST' }).catch(() => {})
     }
 
     return () => {
-      newSocket.close()
+      s.off('connect', onConnect)
+      s.off('connect_error', onConnectError)
+      s.off('reconnect_attempt', onReconnectAttempt)
+      s.off('reconnect', onReconnect)
+      s.off('reconnect_error', onReconnectError)
+      s.off('reconnect_failed', onReconnectFailed)
+      s.off('disconnect', onDisconnect)
+      s.off('session-terminated', onSessionTerminated)
+      s.off('general-message', onGeneralMessage)
+      s.off('private-message', onPrivateMessage)
+      s.off('online-users', onOnlineUsers)
+      s.off('load-messages', onLoadMessages)
+      s.off('load-private-messages', onLoadPrivateMessages)
     }
-  }, [nickname, activePrivateChat, router, showInfo, t, searchParams])
+  }, [nickname, socket, router, showInfo, t, searchParams])
 
   useEffect(() => {
     scrollToBottom()

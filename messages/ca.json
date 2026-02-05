@@ -56,6 +56,9 @@
     "chat": "Xat General",
     "notifications": "Alertes",
     "noNotifications": "No hi ha alertes noves",
+    "markAllNotificationsRead": "Marcar totes com a llegides",
+    "deleteAllNotifications": "Eliminar totes",
+    "deleteNotification": "Eliminar notificació",
     "hello": "Hola, {nickname}!",
     "logout": "Sortir"
   },

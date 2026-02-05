@@ -13,6 +13,7 @@ import { io, type Socket } from 'socket.io-client'
 import { getSocketUrl } from '@/lib/socket'
 import { getStoredNickname, getStoredSocketToken } from '@/lib/client-session'
 import { useNotifications } from '@/lib/notifications'
+import { useI18n, formatTranslation, getLocaleNow } from '@/lib/i18n'
 import { logInfo, logWarn } from '@/lib/client-logger'
 
 type AppSocketContextValue = {
@@ -34,12 +35,15 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
   const [connected, setConnected] = useState(false)
   const router = useRouter()
   const { showInfo, addAlert } = useNotifications()
+  const { locale } = useI18n()
   const routerRef = useRef(router)
   const showInfoRef = useRef(showInfo)
   const addAlertRef = useRef(addAlert)
+  const localeRef = useRef(locale)
   routerRef.current = router
   showInfoRef.current = showInfo
   addAlertRef.current = addAlert
+  localeRef.current = locale
 
   useEffect(() => {
     if (ready === false) {
@@ -77,23 +81,64 @@ export function AppSocketProvider({ children, ready }: { children: ReactNode; re
       setConnected(false)
     })
 
-    s.on('app-notification', (data: { type?: string; title?: string; message?: string; action?: { label?: string; url?: string } }) => {
+    s.on('app-notification', (data: {
+      type?: string
+      title?: string
+      message?: string
+      titleKey?: string
+      messageKey?: string
+      params?: Record<string, string>
+      actorNickname?: string
+      productName?: string
+      action?: { label?: string; labelKey?: string; url?: string }
+    }) => {
       const r = routerRef.current
       const sh = showInfoRef.current
       const addA = addAlertRef.current
-      sh(data.title ?? '', data.message ?? '', {
+      const locale = localeRef.current ?? getLocaleNow()
+      const rawParams = (data.params ?? {}) as Record<string, string | number>
+      const params: Record<string, string | number> = {
+        ...rawParams,
+        nickname: rawParams.nickname ?? rawParams.user ?? data.actorNickname ?? '',
+        productName: rawParams.productName ?? rawParams.producte ?? data.productName ?? '',
+      }
+      // Preferir traducció (idioma de l’app) quan hi ha clau; literal com a fallback
+      let title = ''
+      let message = ''
+      let actionLabel = ''
+      if (data.titleKey) {
+        const translated = formatTranslation(locale, data.titleKey)
+        title = (translated && translated.trim() && translated !== data.titleKey) ? translated : (data.title ?? '')
+      } else {
+        title = (typeof data.title === 'string' && data.title.trim()) ? data.title : ''
+      }
+      if (data.messageKey) {
+        const translated = formatTranslation(locale, data.messageKey, params)
+        message = (translated && translated.trim() && translated !== data.messageKey) ? translated : (data.message ?? '')
+      } else {
+        message = (typeof data.message === 'string' && data.message.trim()) ? data.message : ''
+      }
+      if (data.action?.labelKey) {
+        const translated = formatTranslation(locale, data.action.labelKey)
+        actionLabel = (translated && translated.trim() && translated !== data.action.labelKey) ? translated : (data.action?.label ?? '')
+      } else {
+        actionLabel = (typeof data.action?.label === 'string' && data.action.label.trim()) ? data.action.label : ''
+      }
+      if (!title) title = formatTranslation(locale, 'common.appName')
+      if (!message) message = ' '
+      sh(title, message, {
         type: (data.type as 'info' | 'success' | 'warning' | 'error') || 'info',
         action: data.action?.url
           ? {
-              label: data.action.label ?? '',
+              label: actionLabel,
               onClick: () => r.push(data.action!.url!),
             }
           : undefined,
       })
       addA({
-        title: data.title ?? '',
-        message: data.message ?? '',
-        action: data.action?.url ? { url: data.action.url, label: data.action.label } : undefined,
+        title,
+        message,
+        action: data.action?.url ? { url: data.action.url, label: actionLabel } : undefined,
       })
     })
 
