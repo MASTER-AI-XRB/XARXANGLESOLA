@@ -89,7 +89,7 @@ export async function PATCH(
         if (favorites.length === 0) {
           logInfo('Notificacions prèstec: cap usuari amb el producte als preferits (excepte el propietari).')
         } else {
-          logInfo('Notificacions prèstec:', isLoanStarted ? 'inici' : 'fi', '- enviant a', favorites.length, 'usuari(s).')
+          logInfo(`Notificacions prèstec: ${isLoanStarted ? 'inici' : 'fi'} - enviant a ${favorites.length} usuari(s).`)
           await Promise.all(
             favorites.map((fav) =>
               fetch(`${socketUrl}/notify`, {
