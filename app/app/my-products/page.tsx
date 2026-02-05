@@ -95,22 +95,23 @@ export default function MyProductsPage() {
       (nickname === p.user.nickname && !p.reservedBy))
   const isReservedByOwner = (p: Product) =>
     !!p.reserved && p.reservedBy?.nickname === p.user.nickname
-  /** Filet blau: reserva del propietari. Filet groc: reserva via DM (altra persona). */
+  /** Només el propietari veu els filets verd (prèstec) i blau (reserva del titular); el groc és per qui ha reservat (DM). */
+  const isOwner = (p: Product) => !!nickname && nickname === p.user.nickname
   const showOwnerReservedFillet = (p: Product) => !!p.reserved && p.reservedBy?.nickname === p.user.nickname
   const showDmFillet = (p: Product) =>
     !!nickname && !!p.reserved && p.reservedBy?.nickname === nickname && p.reservedBy?.nickname !== p.user.nickname
   const getFilletClass = (p: Product) =>
-    p.prestec
+    p.prestec && isOwner(p)
       ? 'border-[6px] border-green-500'
-      : showOwnerReservedFillet(p)
+      : showOwnerReservedFillet(p) && isOwner(p)
         ? 'border-[6px] border-blue-500'
         : showDmFillet(p)
           ? 'border-[6px] border-yellow-500'
           : ''
   const getFilletBoxShadow = (p: Product) =>
-    p.prestec
+    p.prestec && isOwner(p)
       ? 'inset 0 0 0 6px #22c55e'
-      : showOwnerReservedFillet(p)
+      : showOwnerReservedFillet(p) && isOwner(p)
         ? 'inset 0 0 0 6px #3b82f6'
         : showDmFillet(p)
           ? 'inset 0 0 0 6px #eab308'

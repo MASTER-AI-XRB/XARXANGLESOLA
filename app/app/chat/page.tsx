@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
+import confetti from 'canvas-confetti'
 import { useI18n } from '@/lib/i18n'
 import { useNotifications } from '@/lib/notifications'
 import TranslateButton from '@/components/TranslateButton'
@@ -24,6 +25,8 @@ interface ProductSummary {
   id: string
   name: string
   images: string[]
+  reserved?: boolean
+  reservedBy?: { nickname: string } | null
 }
 
 export default function ChatPage() {
@@ -49,6 +52,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const activePrivateProductIdRef = useRef<string | null>(null)
   const productIdFromUrlRef = useRef<string | null>(null)
+  const confettiFiredForProductRef = useRef<string | null>(null)
   const privateChatProductsRef = useRef(privateChatProducts)
   const privateChatProductsFetchedRef = useRef(privateChatProductsFetched)
   const loadingPrivateProductsRef = useRef(loadingPrivateProducts)
@@ -97,8 +101,9 @@ export default function ChatPage() {
     setHasRestoredChats(false)
     productIdFromUrlRef.current = null
 
-    const urlNickname = searchParams.get('nickname')
-    const urlProductId = searchParams.get('productId')
+    const fromWindow = new URLSearchParams(window.location.search)
+    const urlNickname = searchParams.get('nickname') || fromWindow.get('nickname') || ''
+    const urlProductId = searchParams.get('productId') || fromWindow.get('productId') || ''
 
     const openChatsKey = `chat:${nickname}:openPrivateChats`
     const activeChatKey = `chat:${nickname}:activePrivateChat`
@@ -120,7 +125,7 @@ export default function ChatPage() {
     if (urlNickname) {
       productIdFromUrlRef.current = urlProductId || null
       setActivePrivateChat(urlNickname)
-      setActivePrivateTab(urlProductId || 'general')
+      setActivePrivateTab(urlProductId ? urlProductId : 'general')
       setOpenPrivateChats((prev) => {
         const next = openList.length ? openList : prev
         return next.includes(urlNickname) ? next : [...next, urlNickname]
@@ -146,6 +151,35 @@ export default function ChatPage() {
 
     setHasRestoredChats(true)
   }, [nickname, searchParams])
+
+  // Quan la URL té nickname + productId (p. ex. des del botó Contactar del producte), forçar xat d’aquest producte
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const urlNickname = params.get('nickname')
+    const urlProductId = params.get('productId')
+    if (!urlNickname || !urlProductId) return
+    productIdFromUrlRef.current = urlProductId
+    setActivePrivateChat(urlNickname)
+    setActivePrivateTab(urlProductId)
+    setOpenPrivateChats((prev) => (prev.includes(urlNickname) ? prev : [...prev, urlNickname]))
+  }, [searchParams])
+
+  // Un cop muntat, re-aplicar nickname + productId des de la URL (evita que searchParams arribi tard)
+  useEffect(() => {
+    if (!nickname || typeof window === 'undefined') return
+    const id = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search)
+      const urlNickname = params.get('nickname')
+      const urlProductId = params.get('productId')
+      if (!urlNickname || !urlProductId) return
+      productIdFromUrlRef.current = urlProductId
+      setActivePrivateChat(urlNickname)
+      setActivePrivateTab(urlProductId)
+      setOpenPrivateChats((prev) => (prev.includes(urlNickname) ? prev : [...prev, urlNickname]))
+    }, 0)
+    return () => clearTimeout(id)
+  }, [nickname])
 
   useEffect(() => {
     if (!activePrivateChat) {
@@ -232,7 +266,13 @@ export default function ChatPage() {
               if (r.ok) {
                 const one = await r.json()
                 if (one?.id && one?.user?.nickname?.toLowerCase() === activePrivateChat.toLowerCase()) {
-                  list = [{ id: one.id, name: one.name ?? '', images: one.images ?? [] }, ...list]
+                  list = [{
+                    id: one.id,
+                    name: one.name ?? '',
+                    images: one.images ?? [],
+                    reserved: !!one.reserved,
+                    reservedBy: one.reservedBy ?? null,
+                  }, ...list]
                 }
               }
             } catch {
@@ -299,6 +339,49 @@ export default function ChatPage() {
       window.localStorage.removeItem(activeProductKey)
     }
   }, [nickname, openPrivateChats, activePrivateChat, activePrivateTab, hasRestoredChats])
+
+  useEffect(() => {
+    const onProductState = (e: Event) => {
+      const { productId: id, reserved, reservedBy } = (e as CustomEvent).detail || {}
+      if (!id || typeof reserved !== 'boolean') return
+      setPrivateChatProducts((prev) => {
+        const next = { ...prev }
+        for (const chatNickname of Object.keys(next)) {
+          const list = next[chatNickname]
+          if (!Array.isArray(list)) continue
+          const idx = list.findIndex((p) => p.id === id)
+          if (idx === -1) continue
+          next[chatNickname] = list.map((p, i) =>
+            i !== idx ? p : { ...p, reserved, reservedBy: reservedBy ?? null }
+          )
+        }
+        return next
+      })
+    }
+    window.addEventListener('product-state', onProductState)
+    return () => window.removeEventListener('product-state', onProductState)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !activePrivateChat || !activePrivateTab || activePrivateTab === 'general' || !nickname) {
+      if (!activePrivateTab || activePrivateTab === 'general') {
+        confettiFiredForProductRef.current = null
+      }
+      return
+    }
+    const products = privateChatProducts[activePrivateChat]
+    const product = Array.isArray(products) ? products.find((p) => p.id === activePrivateTab) : null
+    const reservedByYou = !!product?.reserved && product.reservedBy?.nickname === nickname
+    if (!reservedByYou) return
+    if (confettiFiredForProductRef.current === activePrivateTab) return
+    confettiFiredForProductRef.current = activePrivateTab
+    const fire = (opts: confetti.Options) => {
+      confetti({ spread: 100, ticks: 80, origin: { y: 0.6 }, ...opts })
+    }
+    fire({})
+    setTimeout(() => fire({ angle: 60 }), 80)
+    setTimeout(() => fire({ angle: 120 }), 160)
+  }, [activePrivateChat, activePrivateTab, nickname, privateChatProducts])
 
   // Funció per obtenir la data formatada
   const getDateLabel = (date: Date): string => {
@@ -957,6 +1040,18 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
+              {activePrivateChat && activePrivateTab !== null && activePrivateTab !== 'general' && (() => {
+                const activeProduct = activePrivateProducts.find((p) => p.id === activePrivateTab)
+                if (!activeProduct?.reserved) return null
+                const reservedByYou = !!nickname && activeProduct.reservedBy?.nickname === nickname
+                return (
+                  <div className="flex-shrink-0 mb-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      {reservedByYou ? t('products.reservedByYou') : t('products.reserved')}
+                    </p>
+                  </div>
+                )
+              })()}
               {activePrivateChat && activePrivateTab === null ? (
                 <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                   {t('chat.selectProduct') || 'Selecciona un producte per començar el xat.'}

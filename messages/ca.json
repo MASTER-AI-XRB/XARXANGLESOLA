@@ -69,6 +69,7 @@
     "description": "Descripció",
     "contact": "Contactar",
     "reserved": "Reservat",
+    "reservedByYou": "L'has reservat tu",
     "unreserved": "Desreservar",
     "reserve": "Reservar",
     "deleteConfirm": "Estàs segur que vols eliminar aquest producte?",
