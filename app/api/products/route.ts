@@ -12,9 +12,12 @@ import { mapProduct } from '@/lib/product-map'
 import { apiError, apiOk } from '@/lib/api-response'
 import { logError, logWarn } from '@/lib/logger'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authUserId = getAuthUserId(request)
+
     const products = await prisma.product.findMany({
+      where: authUserId ? { userId: { not: authUserId } } : undefined,
       include: {
         user: { select: { nickname: true } },
         reservedBy: { select: { nickname: true } },

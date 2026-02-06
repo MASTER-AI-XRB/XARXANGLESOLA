@@ -190,6 +190,7 @@ export async function PATCH(
     }
 
     if (notifySecret && socketUrl && product.name) {
+      const wasOwnerReserve = product.reservedById === product.userId
       prisma.user
         .findUnique({
           where: { id: authUserId },
@@ -220,10 +221,10 @@ export async function PATCH(
                       titleKey: 'notifications.productUnreservedFromFavorites',
                       messageKey: 'notifications.productUnreservedFromFavoritesMessage',
                       params: { nickname, productName: product.name },
-                      title: 'Finalitzada la reserva',
-                      message: `${nickname} ha finalitzat la reserva d'un producte dels teus preferits: ${product.name}`,
+                      title: 'Cancel·lada la reserva',
+                      message: `${nickname} ha cancel·lat la reserva d'un producte dels teus preferits: ${product.name}`,
                       notificationType: 'unreserved_favorite',
-                      ownerReserve: true,
+                      ownerReserve: wasOwnerReserve,
                       actorNickname: nickname,
                       productName: product.name,
                       action: { labelKey: 'notifications.viewProduct', label: 'Veure producte', url: `/app/products/${resolvedParams.id}` },
