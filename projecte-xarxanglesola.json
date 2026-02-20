@@ -1,0 +1,10 @@
+{
+  "name": "Xarxa Anglesola - Intercanvi de Productes",
+  "description": "Aplicació web per a intercanviar productes amb sistema de xat en temps real. Inclou: autenticació simple amb nickname, xat general i xats privats entre usuaris, publicació de productes amb nom, fotos (màxim 4) i descripció opcional, visualització de productes. Stack: Next.js 14, TypeScript, Prisma, SQLite/PostgreSQL, Socket.io, Tailwind CSS. Preparada per producció amb PostgreSQL, variables d'entorn i recomanacions de seguretat (validacions, rate limiting, headers). Desenvolupament futur: valoracions, categories, notificacions, perfil d'usuari, historial d'intercanvis.",
+  "status": "actiu",
+  "links": [
+    { "title": "Pàgina web", "url": "https://xarxanglesola.vercel.app/" },
+    { "title": "Repositori", "url": "https://github.com/MASTER-AI-XRB/XARXANGLESOLA" }
+  ],
+  "tags": ["nextjs", "typescript", "prisma", "socket.io", "tailwind", "intercanvi-productes", "xat-temps-real"]
+}
